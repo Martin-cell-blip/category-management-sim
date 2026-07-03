@@ -1,0 +1,132 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>家居日用品类·采销经营模拟盘</title><style>
+:root{--red:#c8102e;--ink:#1a1a1a;--mut:#666;--line:#e5e5e5;--bg:#fafafa}
+*{box-sizing:border-box;margin:0}body{font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);padding:32px 5vw}
+h1{font-size:26px}h2{font-size:19px;margin:36px 0 12px;border-left:4px solid var(--red);padding-left:10px}
+.sub{color:var(--mut);margin:6px 0 4px}
+.note{background:#fff7e6;border:1px solid #ffd591;border-radius:8px;padding:10px 14px;margin:14px 0;font-size:13px;color:#7a5b00}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:20px 0}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi b{font-size:22px;color:var(--red);font-variant-numeric:tabular-nums}
+.kpi span{display:block;font-size:12px;color:var(--mut);margin-top:4px}
+.tw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{position:sticky;top:0;background:#f3f3f3;text-align:left;padding:8px 10px;white-space:nowrap}
+td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap}
+tr:nth-child(even) td{background:#fbfbfb}.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:5px;background:#eee;border-radius:3px;margin-top:3px;min-width:90px}.bar i{display:block;height:100%;border-radius:3px}
+.pvt{width:100%;background:#fff;font-size:12px}.pvt th,.pvt td{padding:6px 8px;border:1px solid var(--line);text-align:right}
+footer{margin-top:40px;font-size:12px;color:var(--mut)}
+@media print{body{background:#fff;padding:0}}
+</style></head><body>
+<h1>家居日用品类 · 采销经营模拟盘</h1>
+<p class="sub">品类结构 → 选品汰换 → 毛利控价 → 大促复盘 | DuckDB + Python 一键复现 | 配套作品:<a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(同一数据平台·结算侧)</p>
+<div class="note">⚠️ 诚实声明:数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套《家居日用品类行业研究报告》);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
+
+<div class="kpis">
+ <div class="kpi"><b>R$ 615,629</b><span>主品类 GMV(housewares,已送达口径)</span></div>
+ <div class="kpi"><b>2,363</b><span>在售 SKU</span></div>
+ <div class="kpi"><b>374</b><span>汰换清单 SKU(末位15%+差评硬规则)</span></div>
+ <div class="kpi"><b>16.52</b><span>黑五大促 ROI(增量假设毛利÷让利成本)</span></div>
+ <div class="kpi"><b>+199%</b><span>黑五周 GMV vs 前4周基线</span></div>
+</div>
+<h2>① 品类结构与价格带(主品类 housewares)</h2>
+<p class="sub">规则:GMV份额/SKU份额 &gt; 1.25 → 供给不足(机会带);&lt; 0.8 → 供给过密</p><div class="tw"><table><thead><tr><th>价格带</th><th>SKU</th><th>销量件</th><th>GMV(R$)</th><th>GMV份额</th><th>份额比</th><th>判定</th></tr></thead><tbody><tr><td>中价带(25-50)</td><td>695</td><td>1890</td><td class="num">70,952<div class="bar"><i style="width:18%;background:#c8102e"></i></div></td><td class="num">0.12</td><td class="num">0.39</td><td>供给过密</td></tr><tr><td>中高价带(50-100)</td><td>648</td><td>1939</td><td class="num">140,674<div class="bar"><i style="width:37%;background:#c8102e"></i></div></td><td class="num">0.23</td><td class="num">0.83</td><td>均衡</td></tr><tr><td>低价带(<25)</td><td>410</td><td>1119</td><td class="num">18,866<div class="bar"><i style="width:5%;background:#c8102e"></i></div></td><td class="num">0.03</td><td class="num">0.18</td><td>供给过密</td></tr><tr><td>高价带(100+)</td><td>610</td><td>1847</td><td class="num">385,136<div class="bar"><i style="width:100%;background:#c8102e"></i></div></td><td class="num">0.63</td><td class="num">2.42</td><td>供给不足(机会带)</td></tr></tbody></table></div>
+<h2>② 选品/汰换:四维评分卡(GMV 35% · 动销 25% · 评分 25% · 运费占比 15%)</h2><div class="tw"><table><thead><tr><th>SKU(前10)</th><th>价格带</th><th>销量</th><th>均分</th><th>综合分</th><th>汰换理由</th></tr></thead><tbody><tr><td>44afebe5ba695261a126f43a4b29d814</td><td>中高价带(50-100)</td><td>8</td><td class="num">2.88</td><td class="num">0.42</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>97f1396a5a1f7c07ba51784efdec44b8</td><td>高价带(100+)</td><td>15</td><td class="num">2.60</td><td class="num">0.35</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>588ea3decc0d8e1d19ce6160c5b0da1b</td><td>高价带(100+)</td><td>12</td><td class="num">2.75</td><td class="num">0.35</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>7855801875dac05bda454284be8be7db</td><td>高价带(100+)</td><td>6</td><td class="num">2.83</td><td class="num">0.33</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>85fa36e792c259f4f0022c6966c50c1c</td><td>高价带(100+)</td><td>4</td><td class="num">2.75</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>1d691d8ace0e9d0e00de0569faf0ae04</td><td>中价带(25-50)</td><td>6</td><td class="num">2.00</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>953439fbf9090e2362532905d89b991f</td><td>高价带(100+)</td><td>6</td><td class="num">2.83</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>c829cd4f5382dfc97d9cb71af8619e79</td><td>中高价带(50-100)</td><td>5</td><td class="num">2.00</td><td class="num">0.30</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>d315b738a6e96f4d9710af966cb7cd5b</td><td>中价带(25-50)</td><td>5</td><td class="num">2.80</td><td class="num">0.30</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>233284251960ee2c45f3bc9e68731630</td><td>中价带(25-50)</td><td>4</td><td class="num">2.50</td><td class="num">0.29</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr></tbody></table></div>
+<p class="sub" style="margin-top:14px">机会带引入候选(评分≥4.5 的高分卖家)</p><div class="tw"><table><thead><tr><th>卖家(前8)</th><th>机会带</th><th>SKU数</th><th>GMV(R$)</th><th>均分</th><th>建议动作</th></tr></thead><tbody><tr><td>9de4643a8dbde634fe55621059d92273</td><td>高价带(100+)</td><td>3</td><td class="num">13,353.50</td><td class="num">4.78</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>33a17d60c64393351ebf1ef860f4e0f2</td><td>高价带(100+)</td><td>9</td><td class="num">7,342.60</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>b410bdd36d5db7a65dcd42b7ead933b8</td><td>高价带(100+)</td><td>2</td><td class="num">7,279.00</td><td class="num">4.92</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>e3b4998c7a498169dc7bce44e6bb6277</td><td>高价带(100+)</td><td>1</td><td class="num">6,735.00</td><td class="num">5.00</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>b347677812ea483b0f528eaf8cbc09b7</td><td>高价带(100+)</td><td>8</td><td class="num">5,912.00</td><td class="num">4.90</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>59b22a78efb79a4797979612b885db36</td><td>高价带(100+)</td><td>9</td><td class="num">5,469.00</td><td class="num">4.94</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>aced59e9b31ef866a94f9e7f29d8d418</td><td>高价带(100+)</td><td>4</td><td class="num">4,635.00</td><td class="num">4.96</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>ce7d1888639e6fb06b2749cbfdac1ff7</td><td>高价带(100+)</td><td>2</td><td class="num">4,380.00</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr></tbody></table></div>
+<h2>③ 毛利与控价:3档调价 × 3档弹性,毛利变动 %</h2>
+<p class="sub">列 = (调价幅度, 弹性假设);行尾为带级判定</p><div class="tw"><table class="dataframe pvt">
+  <thead>
+    <tr>
+      <th></th>
+      <th>price_move</th>
+      <th colspan="3" halign="left">+0%</th>
+      <th colspan="3" halign="left">+5%</th>
+      <th colspan="3" halign="left">-5%</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>elasticity</th>
+      <th>-1.6</th>
+      <th>-1.2</th>
+      <th>-0.8</th>
+      <th>-1.6</th>
+      <th>-1.2</th>
+      <th>-0.8</th>
+      <th>-1.6</th>
+      <th>-1.2</th>
+      <th>-0.8</th>
+    </tr>
+    <tr>
+      <th>price_band</th>
+      <th>verdict</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>中价带(25-50)</th>
+      <th>有提价空间(全弹性假设下毛利正增)</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>8.4</td>
+      <td>10.8</td>
+      <td>13.1</td>
+      <td>-11.3</td>
+      <td>-12.9</td>
+      <td>-14.6</td>
+    </tr>
+    <tr>
+      <th>中高价带(50-100)</th>
+      <th>有提价空间(全弹性假设下毛利正增)</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5.1</td>
+      <td>7.4</td>
+      <td>9.7</td>
+      <td>-7.4</td>
+      <td>-9.1</td>
+      <td>-10.9</td>
+    </tr>
+    <tr>
+      <th>低价带(&lt;25)</th>
+      <th>有提价空间(全弹性假设下毛利正增)</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>15.0</td>
+      <td>17.5</td>
+      <td>20.0</td>
+      <td>-19.0</td>
+      <td>-20.5</td>
+      <td>-22.0</td>
+    </tr>
+    <tr>
+      <th>高价带(100+)</th>
+      <th>有提价空间(全弹性假设下毛利正增)</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>3.5</td>
+      <td>5.7</td>
+      <td>8.0</td>
+      <td>-5.5</td>
+      <td>-7.3</td>
+      <td>-9.0</td>
+    </tr>
+  </tbody>
+</table></div>
+<h2>④ 黑五大促复盘(2017-11-20 ~ 26 vs 前4周基线)</h2><div class="tw"><table><thead><tr><th>价格带</th><th>黑五周GMV</th><th>基线周GMV</th><th>GMV提升%</th><th>增量假设毛利(R$)</th></tr></thead><tbody><tr><td>中高价带(50-100)</td><td class="num">4,026.15</td><td class="num">1,630.23</td><td class="num">147.00</td><td class="num">838.57</td></tr><tr><td>低价带(<25)</td><td class="num">796.65</td><td class="num">99.54</td><td class="num">700.30</td><td class="num">139.42</td></tr><tr><td>高价带(100+)</td><td class="num">7,809.57</td><td class="num">2,287.20</td><td class="num">241.40</td><td class="num">2,208.94</td></tr><tr><td>中价带(25-50)</td><td class="num">1,318.65</td><td class="num">656.72</td><td class="num">100.80</td><td class="num">185.34</td></tr></tbody></table></div>
+<footer>category-management-sim · 求职作品(京东 TET 综合方向/采销) · 全部数字由 run_pipeline.py 生成并经跨模块 GMV 对账校验</footer>
+</body></html>
