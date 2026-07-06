@@ -110,6 +110,7 @@ CSS = """
   --hair:#e0dac9; --rule:#23252c;
   --neg:#3b4d63;
   --serif:"Times New Roman",Georgia,"Songti SC","SimSun",serif;
+  --disp:"Songti SC","SimSun","Noto Serif SC","Times New Roman",serif;
   --sans:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
   --mono:Consolas,"SF Mono",Menlo,monospace;
 }
@@ -132,7 +133,7 @@ a:hover{color:var(--red)}
 .mast-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:22px}
 .logotype{font:600 11px/1 var(--serif);letter-spacing:.32em;color:var(--red);text-transform:uppercase}
 .docno{font:italic 12px/1 var(--serif);color:var(--mut);letter-spacing:.08em}
-h1{font:700 34px/1.35 var(--sans);letter-spacing:.02em}
+h1{font:700 clamp(34px,4.4vw,48px)/1.3 var(--disp);letter-spacing:.05em}
 h1 em{font-style:normal;color:var(--red)}
 .en-sub{font:italic 14px/1.5 var(--serif);color:var(--ink2);margin-top:6px;letter-spacing:.02em}
 .lede{margin-top:14px;font-size:14px;color:var(--ink2)}
@@ -199,10 +200,37 @@ footer{margin-top:52px;border-top:2px solid var(--rule);padding-top:14px;
   display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
   font-size:11.5px;color:var(--mut)}
 footer code{font:11px var(--mono);background:rgba(29,31,38,.05);padding:2px 6px;border-radius:2px}
+/* ── 报头增强:印章 / 决策流程 / 幽灵编号 / 结论批注 / 纸感颗粒 ── */
+.mast{position:relative}
+.seal{position:absolute;right:2px;top:92px;width:94px;height:94px;border:3px solid rgba(200,16,46,.82);
+  border-radius:7px;transform:rotate(-7deg);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:rgba(200,16,46,.86);pointer-events:none;mix-blend-mode:multiply;
+  box-shadow:inset 0 0 0 1px rgba(200,16,46,.32)}
+.seal b{font:700 21px/1.25 var(--disp);letter-spacing:.3em;margin-left:.3em}
+.seal i{font:9px/1 var(--serif);font-style:normal;letter-spacing:.22em;margin-top:6px;opacity:.75}
+.flow{display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap}
+.flow s{text-decoration:none;font-size:12.5px;color:var(--ink);border:1px solid var(--hair);background:#fff;
+  padding:6px 14px;white-space:nowrap}
+.flow s b{font:600 11px var(--serif);color:var(--red);margin-right:7px}
+.flow em{flex:none;width:34px;height:1px;background:linear-gradient(90deg,var(--hair),var(--red))}
+.ex{position:relative}
+.ex::before{content:attr(data-no);position:absolute;right:-10px;top:-36px;z-index:0;
+  font:700 112px/1 var(--serif);color:transparent;-webkit-text-stroke:1px rgba(200,16,46,.13);pointer-events:none}
+.ex>*{position:relative;z-index:1}
+.takeaway{margin-top:14px;padding:12px 18px;background:rgba(29,31,38,.026);border-left:3px solid var(--rule);
+  font-size:13px;line-height:1.95;color:var(--ink)}
+.takeaway b{color:var(--red);font-size:11px;letter-spacing:.3em;margin-right:12px;vertical-align:1px}
+body::after{content:"";position:fixed;inset:0;z-index:98;pointer-events:none;opacity:.05;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E")}
 @media (prefers-reduced-motion:no-preference){
-  .mast-top,.mast h1,.en-sub,.lede,.meta{animation:rise .6s cubic-bezier(.22,.61,.36,1) both}
-  .mast h1{animation-delay:.08s}.en-sub{animation-delay:.16s}.lede{animation-delay:.24s}.meta{animation-delay:.32s}
+  .mast-top,.mast h1,.en-sub,.lede,.flow,.meta{animation:rise .6s cubic-bezier(.22,.61,.36,1) both}
+  .mast h1{animation-delay:.08s}.en-sub{animation-delay:.16s}.lede{animation-delay:.24s}.flow{animation-delay:.34s}.meta{animation-delay:.44s}
   @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .seal{opacity:0;animation:stamp .5s cubic-bezier(.2,1.4,.4,1) 1s both}
+  @keyframes stamp{0%{opacity:0;transform:rotate(-7deg) scale(1.9)}70%{opacity:1;transform:rotate(-7deg) scale(.95)}100%{opacity:1;transform:rotate(-7deg) scale(1)}}
+  .flow em{transform-origin:left;transform:scaleX(0);animation:drawx .45s ease-out both}
+  .flow em:nth-of-type(1){animation-delay:.75s}.flow em:nth-of-type(2){animation-delay:.92s}.flow em:nth-of-type(3){animation-delay:1.09s}
+  @keyframes drawx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.22,.61,.36,1)}
   .reveal.on{opacity:1;transform:none}
   .bar i{transform:scaleX(0);transform-origin:left;transition:transform 1s cubic-bezier(.22,.61,.36,1) .15s}
@@ -219,12 +247,16 @@ footer code{font:11px var(--mono);background:rgba(29,31,38,.05);padding:2px 6px;
   .meta>div{padding-left:0;border-left:none}
   .kpis{grid-template-columns:1fr 1fr;gap:14px 0}
   .kpi{border-left:none;padding-left:0}
-  h1{font-size:26px}
+  h1{font-size:27px}
+  .seal{display:none}
+  .ex::before{display:none}
 }
 @media print{
   body{background:#fff;padding:0}
+  body::after{display:none}
   .sheet{border:none;box-shadow:none;max-width:none;padding:0 8px}
   nav,#prog{display:none}
+  .ex::before{display:none}
 }
 """
 
@@ -272,6 +304,9 @@ JS = r"""
     return;
   }
 
+  /* 矩阵单元格交错浮现 */
+  document.querySelectorAll('.pvt tbody td').forEach(function(td,i){td.style.transitionDelay=(i*16)+'ms'});
+
   /* KPI 数字滚动(保留前缀/千分位/小数位/后缀) */
   function countUp(el){
     var raw=el.textContent;
@@ -299,7 +334,7 @@ JS = r"""
 
   /* 滚动入场 */
   var below=[];
-  document.querySelectorAll('.ex-head,.tw,.note,.kpis,.src,.rule-note').forEach(function(el){
+  document.querySelectorAll('.ex-head,.tw,.note,.kpis,.src,.rule-note,.takeaway').forEach(function(el){
     if(el.getBoundingClientRect().top>innerHeight*0.92){el.classList.add('reveal');below.push(el);}
   });
   var io=new IntersectionObserver(function(es){
@@ -372,13 +407,15 @@ html = f"""<!doctype html>
   </div>
   <h1>家居日用品类 <em>·</em> 采销经营模拟盘</h1>
   <p class="en-sub">Housewares Category P&amp;L Simulator — Assortment, Pricing &amp; Promotion Review</p>
-  <p class="lede">品类结构 → 选品汰换 → 毛利控价 → 大促复盘:四模块决策闭环,全部数字由同一条管线生成并互相对账。</p>
+  <p class="lede">四模块决策闭环,全部数字由同一条管线生成并互相对账。</p>
+  <div class="flow"><s><b>01</b>品类结构</s><em></em><s><b>02</b>选品汰换</s><em></em><s><b>03</b>毛利控价</s><em></em><s><b>04</b>大促复盘</s></div>
   <dl class="meta">
     <div><dt>Data</dt><dd>Olist 巴西电商 10 万+ 真实订单(housewares 主品类,已送达口径)</dd></div>
     <div><dt>Method</dt><dd>DuckDB SQL + Python;决策规则成文,逐条注明依据</dd></div>
     <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(容差 0)</dd></div>
     <div><dt>Companion</dt><dd>配套作品:<a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(同一数据平台 · 结算侧)</dd></div>
   </dl>
+  <div class="seal" aria-hidden="true"><b>对账</b><b>无误</b><i>TOLERANCE&nbsp;0</i></div>
 </header>
 
 <nav id="nav">
@@ -392,7 +429,7 @@ html = f"""<!doctype html>
 
 <div class="note"><b>诚实声明</b>数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套《家居日用品类行业研究报告》);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
 
-<section class="ex" id="m1">
+<section class="ex" id="m1" data-no="01">
   <div class="ex-head"><span class="ex-no">图 1</span>
     <div>
       <h2>品类结构与价格带诊断<small>主品类 housewares</small></h2>
@@ -401,10 +438,11 @@ html = f"""<!doctype html>
   </div>
   <p class="rule-note">判定规则:GMV份额/SKU份额 <b>&gt; 1.25 → 供给不足(机会带)</b>;&lt; 0.8 → 供给过密</p>
   {sec1}
+  <p class="takeaway"><b>结 论</b>高价带以 25.8% 的 SKU 贡献 62.6% 的 GMV(份额比 2.42),是唯一的供给不足带,补供给优先级最高;低价带与中价带供给过密,汰换先行。</p>
   <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(容差 0)。</p>
 </section>
 
-<section class="ex" id="m2">
+<section class="ex" id="m2" data-no="02">
   <div class="ex-head"><span class="ex-no">图 2</span>
     <div>
       <h2>选品/汰换:四维评分卡<small>GMV 35% · 动销 25% · 评分 25% · 运费占比 15%</small></h2>
@@ -414,10 +452,11 @@ html = f"""<!doctype html>
   {sec2a}
   <p class="rule-note" style="margin-top:20px">机会带引入候选(评分≥4.5 的高分卖家)</p>
   {sec2b}
+  <p class="takeaway"><b>结 论</b>{len(delist)} 个低效 SKU 集中于供给过密带,汰换释放的坑位优先给到机会带 {len(intro)} 家评分≥4.5 的高分卖家(谈判扩盘/独家款)。</p>
   <p class="src">资料来源:Olist 公开数据集;评分卡权重与硬规则见 specs/ 决策规则文档。</p>
 </section>
 
-<section class="ex" id="m3">
+<section class="ex" id="m3" data-no="03">
   <div class="ex-head"><span class="ex-no">图 3</span>
     <div>
       <h2>毛利与控价:3档调价 × 3档弹性<small>单元格 = 毛利变动 %</small></h2>
@@ -426,10 +465,11 @@ html = f"""<!doctype html>
   </div>
   <p class="rule-note">列 = (调价幅度, 弹性假设);行尾为带级判定。着色:<b>红 = 毛利正增</b>,蓝灰 = 毛利受损,深浅表示幅度。</p>
   {sec3}
+  <p class="takeaway"><b>结 论</b>全部价格带在所有弹性假设下提价 +5% 毛利均为正,提价空间真实存在;低价带对价格最敏感(-22.0% ~ +20.0%),应保价引流、不轻易动价。</p>
   <p class="src">资料来源:params/cost_assumptions.csv 参数层;弹性为敏感性假设而非估计值。</p>
 </section>
 
-<section class="ex" id="m4">
+<section class="ex" id="m4" data-no="04">
   <div class="ex-head"><span class="ex-no">图 4</span>
     <div>
       <h2>黑五大促复盘<small>2017-11-20 ~ 26 vs 前4周基线</small></h2>
@@ -437,6 +477,7 @@ html = f"""<!doctype html>
     </div>
   </div>
   {sec4}
+  <p class="takeaway"><b>结 论</b>黑五周 GMV +{bf_lift:.0f}%,其中高价带提升 241.40%;让利成本极小,增长由流量而非折扣驱动,大促资源应向高价带倾斜。</p>
   <p class="src">资料来源:Olist 公开数据集;让利成本极小,判断增量由流量而非折扣驱动。</p>
 </section>
 
