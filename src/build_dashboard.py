@@ -413,7 +413,7 @@ html = f"""<!doctype html>
     <div><dt>Data</dt><dd>Olist 巴西电商 10 万+ 真实订单(housewares 主品类,已送达口径)</dd></div>
     <div><dt>Method</dt><dd>DuckDB SQL + Python;决策规则成文,逐条注明依据</dd></div>
     <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(容差 0)</dd></div>
-    <div><dt>Companion</dt><dd>配套作品:<a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(同一数据平台 · 结算侧)</dd></div>
+    <div><dt>Companion</dt><dd>配套作品:<a href="research/">行业研究报告</a>(中国市场判断层) · <a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(结算侧)</dd></div>
   </dl>
   <div class="seal" aria-hidden="true"><b>对账</b><b>无误</b><i>TOLERANCE&nbsp;0</i></div>
 </header>
@@ -427,7 +427,7 @@ html = f"""<!doctype html>
 
 {kpi}
 
-<div class="note"><b>诚实声明</b>数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套《家居日用品类行业研究报告》);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
+<div class="note"><b>诚实声明</b>数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套<a href="research/">《家居日用品类行业研究报告》</a>);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
 
 <section class="ex" id="m1" data-no="01">
   <div class="ex-head"><span class="ex-no">图 1</span>
