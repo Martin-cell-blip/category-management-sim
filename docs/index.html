@@ -1,154 +1,341 @@
-<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>家居日用品类·采销经营模拟盘</title><style>
-:root{--red:#c8102e;--ink:#1a1a1a;--mut:#666;--line:#e5e5e5;--bg:#fafafa}
-*{box-sizing:border-box;margin:0}body{font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);padding:32px 5vw}
-h1{font-size:26px}h2{font-size:19px;margin:36px 0 12px;border-left:4px solid var(--red);padding-left:10px}
-.sub{color:var(--mut);margin:6px 0 4px}
-.note{background:#fff7e6;border:1px solid #ffd591;border-radius:8px;padding:10px 14px;margin:14px 0;font-size:13px;color:#7a5b00}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:20px 0}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-.kpi b{font-size:22px;color:var(--red);font-variant-numeric:tabular-nums}
-.kpi span{display:block;font-size:12px;color:var(--mut);margin-top:4px}
-.tw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th{position:sticky;top:0;background:#f3f3f3;text-align:left;padding:8px 10px;white-space:nowrap}
-td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap}
-tr:nth-child(even) td{background:#fbfbfb}.num{text-align:right;font-variant-numeric:tabular-nums}
-.bar{height:5px;background:#eee;border-radius:3px;margin-top:3px;min-width:90px}.bar i{display:block;height:100%;border-radius:3px}
-.pvt{width:100%;background:#fff;font-size:12px}.pvt th,.pvt td{padding:6px 8px;border:1px solid var(--line);text-align:right}
-footer{margin-top:40px;font-size:12px;color:var(--mut)}
-@media (prefers-reduced-motion:no-preference){
-h1{animation:fadeDown .5s ease both}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-.kpi{transition:transform .25s ease,box-shadow .25s ease}
-.kpi:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(200,16,46,.10)}
-.reveal{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
-.reveal.on{opacity:1;transform:none}
-.bar i{transform:scaleX(0);transform-origin:left;transition:transform .9s cubic-bezier(.22,.61,.36,1)}
-.bars-on .bar i{transform:scaleX(1)}
-tbody tr{transition:background .15s ease}
-tbody tr:hover td{background:#fff4f5}
+<meta name="description" content="家居日用品类采销经营模拟盘：品类结构、选品汰换、毛利控价、大促复盘四模块决策闭环，DuckDB + Python 一键复现">
+<title>家居日用品类·采销经营模拟盘</title>
+<style>
+:root{
+  --red:#c8102e; --red-deep:#8f0b20;
+  --ink:#1d1f26; --ink2:#494c55;
+  --mut:#847d6d;
+  --paper:#f2efe6; --sheet:#fdfcf8;
+  --hair:#e0dac9; --rule:#23252c;
+  --neg:#3b4d63;
+  --serif:"Times New Roman",Georgia,"Songti SC","SimSun",serif;
+  --sans:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+  --mono:Consolas,"SF Mono",Menlo,monospace;
 }
-@media print{body{background:#fff;padding:0}}
-</style></head><body>
-<h1>家居日用品类 · 采销经营模拟盘</h1>
-<p class="sub">品类结构 → 选品汰换 → 毛利控价 → 大促复盘 | DuckDB + Python 一键复现 | 配套作品:<a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(同一数据平台·结算侧)</p>
-<div class="note">⚠️ 诚实声明:数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套《家居日用品类行业研究报告》);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{
+  font:14px/1.85 var(--sans);color:var(--ink);
+  background:
+    radial-gradient(1200px 500px at 50% -200px,rgba(200,16,46,.045),transparent 60%),
+    repeating-linear-gradient(0deg,transparent 0 3px,rgba(29,31,38,.006) 3px 4px),
+    var(--paper);
+  padding:44px 4vw 60px;
+}
+a{color:var(--red-deep);text-decoration:none;border-bottom:1px solid rgba(200,16,46,.35)}
+a:hover{color:var(--red)}
+.sheet{max-width:1060px;margin:0 auto;background:var(--sheet);border:1px solid var(--hair);
+  box-shadow:0 1px 2px rgba(29,31,38,.04),0 24px 60px -30px rgba(29,31,38,.18);
+  padding:0 56px 46px}
+/* ── 报头 ── */
+.mast{border-top:6px solid var(--red);padding:26px 0 26px;border-bottom:2px solid var(--rule)}
+.mast-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.logotype{font:600 11px/1 var(--serif);letter-spacing:.32em;color:var(--red);text-transform:uppercase}
+.docno{font:italic 12px/1 var(--serif);color:var(--mut);letter-spacing:.08em}
+h1{font:700 34px/1.35 var(--sans);letter-spacing:.02em}
+h1 em{font-style:normal;color:var(--red)}
+.en-sub{font:italic 14px/1.5 var(--serif);color:var(--ink2);margin-top:6px;letter-spacing:.02em}
+.lede{margin-top:14px;font-size:14px;color:var(--ink2)}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:22px;border-top:1px solid var(--hair)}
+.meta>div{padding:12px 16px 2px;border-left:1px solid var(--hair)}
+.meta>div:first-child{border-left:none;padding-left:0}
+.meta dt{font:600 10px/1 var(--serif);letter-spacing:.22em;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
+.meta dd{font-size:12.5px;line-height:1.6;color:var(--ink2)}
+.meta dd code{font:12px var(--mono);background:rgba(29,31,38,.05);padding:1px 5px;border-radius:2px}
+/* ── 导航 ── */
+nav{position:sticky;top:0;z-index:9;background:rgba(253,252,248,.93);backdrop-filter:blur(6px);
+  display:flex;gap:26px;align-items:center;border-bottom:1px solid var(--hair);
+  margin:0 -56px;padding:0 56px;height:46px}
+nav a{border:none;font-size:12.5px;color:var(--ink2);height:100%;display:inline-flex;align-items:center;position:relative}
+nav a i{font:600 11px var(--serif);font-style:normal;color:var(--red);margin-right:6px;letter-spacing:.06em}
+nav a.act{color:var(--ink)}
+nav a.act::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--red)}
+#prog{position:fixed;top:0;left:0;height:2px;background:var(--red);width:0;z-index:99}
+/* ── 核心读数 ── */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);margin:34px 0 8px}
+.kpi{padding:2px 20px 6px;border-left:1px solid var(--hair)}
+.kpi:first-child{border-left:none;padding-left:0}
+.kpi b{display:block;font:600 29px/1.25 var(--serif);color:var(--red);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.kpi span{display:block;font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.55}
+.kpis-cap{font:600 10px/1 var(--serif);letter-spacing:.28em;color:var(--mut);text-transform:uppercase;margin:30px 0 0}
+/* ── 声明 ── */
+.note{border-left:3px solid var(--red);background:rgba(200,16,46,.028);
+  padding:14px 20px;margin:26px 0 8px;font-size:12.5px;color:var(--ink2);line-height:1.9}
+.note b{font-size:12.5px;color:var(--red-deep);margin-right:6px}
+/* ── 图表区 ── */
+.ex{margin-top:46px}
+.ex-head{display:flex;gap:14px;align-items:flex-start}
+.ex-no{flex:none;font:600 11px/1 var(--serif);letter-spacing:.14em;color:#fff;background:var(--red);
+  padding:5px 9px;margin-top:5px}
+h2{font:700 19px/1.5 var(--sans)}
+h2 small{font-weight:400;font-size:13px;color:var(--mut);margin-left:10px}
+.ex-en{font:italic 12px/1.4 var(--serif);color:var(--mut);letter-spacing:.03em;margin-top:2px}
+.rule-note{font-size:12.5px;color:var(--ink2);margin:12px 0 10px}
+.rule-note b{color:var(--red-deep)}
+.tw{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13px;border-top:2px solid var(--rule);border-bottom:1.5px solid var(--rule)}
+th{font:600 12.5px var(--sans);text-align:left;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);color:var(--ink)}
+td{padding:8px 12px;border-top:1px solid var(--hair);white-space:nowrap;color:var(--ink2)}
+tbody th{font-weight:600;border-top:1px solid var(--hair);border-bottom:none;color:var(--ink)}
+.num,td.num,th.num{text-align:right;font-family:var(--serif);font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+tbody tr{transition:background .15s ease}
+tbody tr:hover td,tbody tr:hover th{background:rgba(200,16,46,.03)}
+.mono{font:11.5px var(--mono);color:var(--ink2)}
+.src{font-size:11.5px;color:var(--mut);margin-top:9px}
+.src::before{content:"";display:inline-block;width:18px;height:1px;background:var(--mut);vertical-align:4px;margin-right:8px}
+/* 条形 */
+.bar{height:4px;background:rgba(29,31,38,.08);margin-top:4px;min-width:110px}
+.bar i{display:block;height:100%;background:#565d68}
+tr.hot .bar i{background:var(--red)}
+/* 判定标签 */
+.tag{display:inline-block;font-size:11.5px;line-height:1;padding:5px 9px;border:1px solid;letter-spacing:.04em;white-space:nowrap}
+.tag-hot{color:#fff;background:var(--red);border-color:var(--red)}
+.tag-cold{color:var(--ink2);border-color:#b9b2a0}
+.tag-mid{color:var(--ink2);border-color:var(--hair);background:rgba(29,31,38,.03)}
+tr.hot td,tr.hot th{background:rgba(200,16,46,.035)}
+/* 矩阵 */
+.pvt th,.pvt td{text-align:right}
+.pvt thead th{text-align:center}
+.pvt thead .grp{border-left:1px solid var(--hair);font-family:var(--serif);font-size:13px}
+.pvt thead .ela{font:italic 12px var(--serif);color:var(--mut);font-weight:400}
+.pvt tbody th{text-align:left}
+.pvt tbody td{font-family:var(--serif);font-size:13px;font-variant-numeric:tabular-nums}
+.pvt td.v0{color:#a9a292}
+.pvt .verd{text-align:left;font-family:var(--sans);font-size:11.5px;color:var(--ink2);border-left:1px solid var(--hair)}
+/* ── 页脚 ── */
+footer{margin-top:52px;border-top:2px solid var(--rule);padding-top:14px;
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--mut)}
+footer code{font:11px var(--mono);background:rgba(29,31,38,.05);padding:2px 6px;border-radius:2px}
+/* ── 动效(尊重系统减少动效设置) ── */
+@media (prefers-reduced-motion:no-preference){
+  .mast-top,.mast h1,.en-sub,.lede,.meta{animation:rise .6s cubic-bezier(.22,.61,.36,1) both}
+  .mast h1{animation-delay:.08s}.en-sub{animation-delay:.16s}.lede{animation-delay:.24s}.meta{animation-delay:.32s}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.22,.61,.36,1)}
+  .reveal.on{opacity:1;transform:none}
+  .bar i{transform:scaleX(0);transform-origin:left;transition:transform 1s cubic-bezier(.22,.61,.36,1) .15s}
+  .bars-on .bar i{transform:scaleX(1)}
+  .pvt tbody td{opacity:0;transition:opacity .5s ease}
+  .bars-on.pvt-w tbody td,.pvt-w.bars-on tbody td{opacity:1}
+  .kpi b{transition:color .2s ease}
+  .kpi:hover b{color:var(--red-deep)}
+}
+@media (max-width:900px){
+  .sheet{padding:0 22px 30px}
+  nav{margin:0 -22px;padding:0 22px;gap:16px;overflow-x:auto}
+  .meta{grid-template-columns:1fr 1fr}
+  .meta>div{padding-left:0;border-left:none}
+  .kpis{grid-template-columns:1fr 1fr;gap:14px 0}
+  .kpi{border-left:none;padding-left:0}
+  h1{font-size:26px}
+}
+@media print{
+  body{background:#fff;padding:0}
+  .sheet{border:none;box-shadow:none;max-width:none;padding:0 8px}
+  nav,#prog{display:none}
+}
+</style>
+</head>
+<body>
+<i id="prog"></i>
+<div class="sheet">
 
-<div class="kpis">
- <div class="kpi"><b>R$ 615,629</b><span>主品类 GMV(housewares,已送达口径)</span></div>
- <div class="kpi"><b>2,363</b><span>在售 SKU</span></div>
- <div class="kpi"><b>374</b><span>汰换清单 SKU(末位15%+差评硬规则)</span></div>
- <div class="kpi"><b>16.52</b><span>黑五大促 ROI(增量假设毛利÷让利成本)</span></div>
- <div class="kpi"><b>+199%</b><span>黑五周 GMV vs 前4周基线</span></div>
+<header class="mast">
+  <div class="mast-top">
+    <span class="logotype">Category Management Simulator</span>
+    <span class="docno">求职作品 · 京东 TET 综合方向（采销） · 2026</span>
+  </div>
+  <h1>家居日用品类 <em>·</em> 采销经营模拟盘</h1>
+  <p class="en-sub">Housewares Category P&amp;L Simulator — Assortment, Pricing &amp; Promotion Review</p>
+  <p class="lede">品类结构 → 选品汰换 → 毛利控价 → 大促复盘：四模块决策闭环，全部数字由同一条管线生成并互相对账。</p>
+  <dl class="meta">
+    <div><dt>Data</dt><dd>Olist 巴西电商 10 万+ 真实订单（housewares 主品类，已送达口径）</dd></div>
+    <div><dt>Method</dt><dd>DuckDB SQL + Python；决策规则成文，逐条注明依据</dd></div>
+    <div><dt>Reproduce</dt><dd>一键复现：<code>python run_pipeline.py</code>；跨模块 GMV 对账（容差 0）</dd></div>
+    <div><dt>Companion</dt><dd>配套作品：<a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>（同一数据平台 · 结算侧）</dd></div>
+  </dl>
+</header>
+
+<nav id="nav">
+  <a href="#m1"><i>01</i>结构诊断</a>
+  <a href="#m2"><i>02</i>选品汰换</a>
+  <a href="#m3"><i>03</i>控价矩阵</a>
+  <a href="#m4"><i>04</i>大促复盘</a>
+</nav>
+
+<p class="kpis-cap">Key Figures · 核心读数</p>
+<section class="kpis">
+  <div class="kpi"><b>R$ 615,629</b><span>主品类 GMV(housewares,已送达口径)</span></div>
+  <div class="kpi"><b>2,363</b><span>在售 SKU</span></div>
+  <div class="kpi"><b>374</b><span>汰换清单 SKU(末位15%+差评硬规则)</span></div>
+  <div class="kpi"><b>16.52</b><span>黑五大促 ROI(增量假设毛利÷让利成本)</span></div>
+  <div class="kpi"><b>+199%</b><span>黑五周 GMV vs 前4周基线</span></div>
+</section>
+
+<div class="note"><b>诚实声明</b>数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套《家居日用品类行业研究报告》);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
+
+<!-- 图 1 -->
+<section class="ex" id="m1">
+  <div class="ex-head"><span class="ex-no">图 1</span>
+    <div>
+      <h2>品类结构与价格带诊断<small>主品类 housewares</small></h2>
+      <p class="ex-en">Exhibit 1 &nbsp;Price-band structure &amp; supply–demand balance</p>
+    </div>
+  </div>
+  <p class="rule-note">判定规则:GMV份额/SKU份额 <b>&gt; 1.25 → 供给不足(机会带)</b>;&lt; 0.8 → 供给过密</p>
+  <div class="tw"><table>
+    <thead><tr><th>价格带</th><th class="num">SKU</th><th class="num">销量件</th><th class="num">GMV(R$)</th><th class="num">GMV份额</th><th class="num">份额比</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td>中价带(25-50)</td><td class="num">695</td><td class="num">1890</td><td class="num">70,952<div class="bar"><i style="width:18%"></i></div></td><td class="num">0.12</td><td class="num">0.39</td><td><span class="tag tag-cold">供给过密</span></td></tr>
+      <tr><td>中高价带(50-100)</td><td class="num">648</td><td class="num">1939</td><td class="num">140,674<div class="bar"><i style="width:37%"></i></div></td><td class="num">0.23</td><td class="num">0.83</td><td><span class="tag tag-mid">均衡</span></td></tr>
+      <tr><td>低价带(&lt;25)</td><td class="num">410</td><td class="num">1119</td><td class="num">18,866<div class="bar"><i style="width:5%"></i></div></td><td class="num">0.03</td><td class="num">0.18</td><td><span class="tag tag-cold">供给过密</span></td></tr>
+      <tr class="hot"><td>高价带(100+)</td><td class="num">610</td><td class="num">1847</td><td class="num">385,136<div class="bar"><i style="width:100%"></i></div></td><td class="num">0.63</td><td class="num">2.42</td><td><span class="tag tag-hot">供给不足(机会带)</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(容差 0)。</p>
+</section>
+
+<!-- 图 2 -->
+<section class="ex" id="m2">
+  <div class="ex-head"><span class="ex-no">图 2</span>
+    <div>
+      <h2>选品/汰换:四维评分卡<small>GMV 35% · 动销 25% · 评分 25% · 运费占比 15%</small></h2>
+      <p class="ex-en">Exhibit 2 &nbsp;Assortment scorecard — delisting &amp; onboarding candidates</p>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>SKU(前10)</th><th>价格带</th><th class="num">销量</th><th class="num">均分</th><th class="num">综合分</th><th>汰换理由</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">44afebe5ba695261a126f43a4b29d814</td><td>中高价带(50-100)</td><td class="num">8</td><td class="num">2.88</td><td class="num">0.42</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">97f1396a5a1f7c07ba51784efdec44b8</td><td>高价带(100+)</td><td class="num">15</td><td class="num">2.60</td><td class="num">0.35</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">588ea3decc0d8e1d19ce6160c5b0da1b</td><td>高价带(100+)</td><td class="num">12</td><td class="num">2.75</td><td class="num">0.35</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">7855801875dac05bda454284be8be7db</td><td>高价带(100+)</td><td class="num">6</td><td class="num">2.83</td><td class="num">0.33</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">85fa36e792c259f4f0022c6966c50c1c</td><td>高价带(100+)</td><td class="num">4</td><td class="num">2.75</td><td class="num">0.31</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">1d691d8ace0e9d0e00de0569faf0ae04</td><td>中价带(25-50)</td><td class="num">6</td><td class="num">2.00</td><td class="num">0.31</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">953439fbf9090e2362532905d89b991f</td><td>高价带(100+)</td><td class="num">6</td><td class="num">2.83</td><td class="num">0.31</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">c829cd4f5382dfc97d9cb71af8619e79</td><td>中高价带(50-100)</td><td class="num">5</td><td class="num">2.00</td><td class="num">0.30</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">d315b738a6e96f4d9710af966cb7cd5b</td><td>中价带(25-50)</td><td class="num">5</td><td class="num">2.80</td><td class="num">0.30</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+      <tr><td class="mono">233284251960ee2c45f3bc9e68731630</td><td>中价带(25-50)</td><td class="num">4</td><td class="num">2.50</td><td class="num">0.29</td><td>差评硬规则(均分&lt;3.0且销量≥3)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="rule-note" style="margin-top:20px">机会带引入候选(评分≥4.5 的高分卖家)</p>
+  <div class="tw"><table>
+    <thead><tr><th>卖家(前8)</th><th>机会带</th><th class="num">SKU数</th><th class="num">GMV(R$)</th><th class="num">均分</th><th>建议动作</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">9de4643a8dbde634fe55621059d92273</td><td>高价带(100+)</td><td class="num">3</td><td class="num">13,353.50</td><td class="num">4.78</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">33a17d60c64393351ebf1ef860f4e0f2</td><td>高价带(100+)</td><td class="num">9</td><td class="num">7,342.60</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">b410bdd36d5db7a65dcd42b7ead933b8</td><td>高价带(100+)</td><td class="num">2</td><td class="num">7,279.00</td><td class="num">4.92</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">e3b4998c7a498169dc7bce44e6bb6277</td><td>高价带(100+)</td><td class="num">1</td><td class="num">6,735.00</td><td class="num">5.00</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">b347677812ea483b0f528eaf8cbc09b7</td><td>高价带(100+)</td><td class="num">8</td><td class="num">5,912.00</td><td class="num">4.90</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">59b22a78efb79a4797979612b885db36</td><td>高价带(100+)</td><td class="num">9</td><td class="num">5,469.00</td><td class="num">4.94</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">aced59e9b31ef866a94f9e7f29d8d418</td><td>高价带(100+)</td><td class="num">4</td><td class="num">4,635.00</td><td class="num">4.96</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+      <tr><td class="mono">ce7d1888639e6fb06b2749cbfdac1ff7</td><td>高价带(100+)</td><td class="num">2</td><td class="num">4,380.00</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">资料来源:Olist 公开数据集;评分卡权重与硬规则见 specs/ 决策规则文档。</p>
+</section>
+
+<!-- 图 3 -->
+<section class="ex" id="m3">
+  <div class="ex-head"><span class="ex-no">图 3</span>
+    <div>
+      <h2>毛利与控价:3档调价 × 3档弹性<small>单元格 = 毛利变动 %</small></h2>
+      <p class="ex-en">Exhibit 3 &nbsp;Pricing scenario matrix — margin impact under elasticity assumptions</p>
+    </div>
+  </div>
+  <p class="rule-note">列 = (调价幅度, 弹性假设);行尾为带级判定。着色:<b>红 = 毛利正增</b>,蓝灰 = 毛利受损,深浅表示幅度。</p>
+  <div class="tw pvt-w"><table class="pvt">
+    <thead>
+      <tr><th rowspan="2" style="text-align:left">价格带</th><th colspan="3" class="grp">维持 +0%</th><th colspan="3" class="grp">提价 +5%</th><th colspan="3" class="grp">降价 -5%</th><th rowspan="2" style="text-align:left">带级判定</th></tr>
+      <tr><th class="ela">-1.6</th><th class="ela">-1.2</th><th class="ela">-0.8</th><th class="ela">-1.6</th><th class="ela">-1.2</th><th class="ela">-0.8</th><th class="ela">-1.6</th><th class="ela">-1.2</th><th class="ela">-0.8</th></tr>
+    </thead>
+    <tbody>
+      <tr><th>中价带(25-50)</th><td>0.0</td><td>0.0</td><td>0.0</td><td>8.4</td><td>10.8</td><td>13.1</td><td>-11.3</td><td>-12.9</td><td>-14.6</td><td class="verd">有提价空间(全弹性假设下毛利正增)</td></tr>
+      <tr><th>中高价带(50-100)</th><td>0.0</td><td>0.0</td><td>0.0</td><td>5.1</td><td>7.4</td><td>9.7</td><td>-7.4</td><td>-9.1</td><td>-10.9</td><td class="verd">有提价空间(全弹性假设下毛利正增)</td></tr>
+      <tr><th>低价带(&lt;25)</th><td>0.0</td><td>0.0</td><td>0.0</td><td>15.0</td><td>17.5</td><td>20.0</td><td>-19.0</td><td>-20.5</td><td>-22.0</td><td class="verd">有提价空间(全弹性假设下毛利正增)</td></tr>
+      <tr><th>高价带(100+)</th><td>0.0</td><td>0.0</td><td>0.0</td><td>3.5</td><td>5.7</td><td>8.0</td><td>-5.5</td><td>-7.3</td><td>-9.0</td><td class="verd">有提价空间(全弹性假设下毛利正增)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">资料来源:params/cost_assumptions.csv 参数层;弹性为敏感性假设而非估计值。</p>
+</section>
+
+<!-- 图 4 -->
+<section class="ex" id="m4">
+  <div class="ex-head"><span class="ex-no">图 4</span>
+    <div>
+      <h2>黑五大促复盘<small>2017-11-20 ~ 26 vs 前4周基线</small></h2>
+      <p class="ex-en">Exhibit 4 &nbsp;Black Friday post-mortem — uplift by price band</p>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>价格带</th><th class="num">黑五周GMV</th><th class="num">基线周GMV</th><th class="num">GMV提升%</th><th class="num">增量假设毛利(R$)</th></tr></thead>
+    <tbody>
+      <tr><td>中高价带(50-100)</td><td class="num">4,026.15</td><td class="num">1,630.23</td><td class="num">147.00</td><td class="num">838.57</td></tr>
+      <tr><td>低价带(&lt;25)</td><td class="num">796.65</td><td class="num">99.54</td><td class="num">700.30</td><td class="num">139.42</td></tr>
+      <tr class="hot"><td>高价带(100+)</td><td class="num">7,809.57</td><td class="num">2,287.20</td><td class="num">241.40</td><td class="num">2,208.94</td></tr>
+      <tr><td>中价带(25-50)</td><td class="num">1,318.65</td><td class="num">656.72</td><td class="num">100.80</td><td class="num">185.34</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">资料来源:Olist 公开数据集;让利成本极小,判断增量由流量而非折扣驱动。</p>
+</section>
+
+<footer>
+  <span>category-management-sim · 求职作品(京东 TET 综合方向/采销) · 全部数字由 run_pipeline.py 生成并经跨模块 GMV 对账校验</span>
+  <span>复现:<code>python run_pipeline.py</code> · <a href="https://github.com/Martin-cell-blip/category-management-sim">源码 GitHub</a></span>
+</footer>
+
 </div>
-<h2>① 品类结构与价格带(主品类 housewares)</h2>
-<p class="sub">规则:GMV份额/SKU份额 &gt; 1.25 → 供给不足(机会带);&lt; 0.8 → 供给过密</p><div class="tw"><table><thead><tr><th>价格带</th><th>SKU</th><th>销量件</th><th>GMV(R$)</th><th>GMV份额</th><th>份额比</th><th>判定</th></tr></thead><tbody><tr><td>中价带(25-50)</td><td>695</td><td>1890</td><td class="num">70,952<div class="bar"><i style="width:18%;background:#c8102e"></i></div></td><td class="num">0.12</td><td class="num">0.39</td><td>供给过密</td></tr><tr><td>中高价带(50-100)</td><td>648</td><td>1939</td><td class="num">140,674<div class="bar"><i style="width:37%;background:#c8102e"></i></div></td><td class="num">0.23</td><td class="num">0.83</td><td>均衡</td></tr><tr><td>低价带(<25)</td><td>410</td><td>1119</td><td class="num">18,866<div class="bar"><i style="width:5%;background:#c8102e"></i></div></td><td class="num">0.03</td><td class="num">0.18</td><td>供给过密</td></tr><tr><td>高价带(100+)</td><td>610</td><td>1847</td><td class="num">385,136<div class="bar"><i style="width:100%;background:#c8102e"></i></div></td><td class="num">0.63</td><td class="num">2.42</td><td>供给不足(机会带)</td></tr></tbody></table></div>
-<h2>② 选品/汰换:四维评分卡(GMV 35% · 动销 25% · 评分 25% · 运费占比 15%)</h2><div class="tw"><table><thead><tr><th>SKU(前10)</th><th>价格带</th><th>销量</th><th>均分</th><th>综合分</th><th>汰换理由</th></tr></thead><tbody><tr><td>44afebe5ba695261a126f43a4b29d814</td><td>中高价带(50-100)</td><td>8</td><td class="num">2.88</td><td class="num">0.42</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>97f1396a5a1f7c07ba51784efdec44b8</td><td>高价带(100+)</td><td>15</td><td class="num">2.60</td><td class="num">0.35</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>588ea3decc0d8e1d19ce6160c5b0da1b</td><td>高价带(100+)</td><td>12</td><td class="num">2.75</td><td class="num">0.35</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>7855801875dac05bda454284be8be7db</td><td>高价带(100+)</td><td>6</td><td class="num">2.83</td><td class="num">0.33</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>85fa36e792c259f4f0022c6966c50c1c</td><td>高价带(100+)</td><td>4</td><td class="num">2.75</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>1d691d8ace0e9d0e00de0569faf0ae04</td><td>中价带(25-50)</td><td>6</td><td class="num">2.00</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>953439fbf9090e2362532905d89b991f</td><td>高价带(100+)</td><td>6</td><td class="num">2.83</td><td class="num">0.31</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>c829cd4f5382dfc97d9cb71af8619e79</td><td>中高价带(50-100)</td><td>5</td><td class="num">2.00</td><td class="num">0.30</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>d315b738a6e96f4d9710af966cb7cd5b</td><td>中价带(25-50)</td><td>5</td><td class="num">2.80</td><td class="num">0.30</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr><tr><td>233284251960ee2c45f3bc9e68731630</td><td>中价带(25-50)</td><td>4</td><td class="num">2.50</td><td class="num">0.29</td><td>差评硬规则(均分<3.0且销量≥3)</td></tr></tbody></table></div>
-<p class="sub" style="margin-top:14px">机会带引入候选(评分≥4.5 的高分卖家)</p><div class="tw"><table><thead><tr><th>卖家(前8)</th><th>机会带</th><th>SKU数</th><th>GMV(R$)</th><th>均分</th><th>建议动作</th></tr></thead><tbody><tr><td>9de4643a8dbde634fe55621059d92273</td><td>高价带(100+)</td><td>3</td><td class="num">13,353.50</td><td class="num">4.78</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>33a17d60c64393351ebf1ef860f4e0f2</td><td>高价带(100+)</td><td>9</td><td class="num">7,342.60</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>b410bdd36d5db7a65dcd42b7ead933b8</td><td>高价带(100+)</td><td>2</td><td class="num">7,279.00</td><td class="num">4.92</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>e3b4998c7a498169dc7bce44e6bb6277</td><td>高价带(100+)</td><td>1</td><td class="num">6,735.00</td><td class="num">5.00</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>b347677812ea483b0f528eaf8cbc09b7</td><td>高价带(100+)</td><td>8</td><td class="num">5,912.00</td><td class="num">4.90</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>59b22a78efb79a4797979612b885db36</td><td>高价带(100+)</td><td>9</td><td class="num">5,469.00</td><td class="num">4.94</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>aced59e9b31ef866a94f9e7f29d8d418</td><td>高价带(100+)</td><td>4</td><td class="num">4,635.00</td><td class="num">4.96</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr><tr><td>ce7d1888639e6fb06b2749cbfdac1ff7</td><td>高价带(100+)</td><td>2</td><td class="num">4,380.00</td><td class="num">4.86</td><td>机会带优质卖家,建议谈判扩充货盘/独家款</td></tr></tbody></table></div>
-<h2>③ 毛利与控价:3档调价 × 3档弹性,毛利变动 %</h2>
-<p class="sub">列 = (调价幅度, 弹性假设);行尾为带级判定</p><div class="tw"><table class="dataframe pvt">
-  <thead>
-    <tr>
-      <th></th>
-      <th>price_move</th>
-      <th colspan="3" halign="left">+0%</th>
-      <th colspan="3" halign="left">+5%</th>
-      <th colspan="3" halign="left">-5%</th>
-    </tr>
-    <tr>
-      <th></th>
-      <th>elasticity</th>
-      <th>-1.6</th>
-      <th>-1.2</th>
-      <th>-0.8</th>
-      <th>-1.6</th>
-      <th>-1.2</th>
-      <th>-0.8</th>
-      <th>-1.6</th>
-      <th>-1.2</th>
-      <th>-0.8</th>
-    </tr>
-    <tr>
-      <th>price_band</th>
-      <th>verdict</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>中价带(25-50)</th>
-      <th>有提价空间(全弹性假设下毛利正增)</th>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>8.4</td>
-      <td>10.8</td>
-      <td>13.1</td>
-      <td>-11.3</td>
-      <td>-12.9</td>
-      <td>-14.6</td>
-    </tr>
-    <tr>
-      <th>中高价带(50-100)</th>
-      <th>有提价空间(全弹性假设下毛利正增)</th>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>5.1</td>
-      <td>7.4</td>
-      <td>9.7</td>
-      <td>-7.4</td>
-      <td>-9.1</td>
-      <td>-10.9</td>
-    </tr>
-    <tr>
-      <th>低价带(&lt;25)</th>
-      <th>有提价空间(全弹性假设下毛利正增)</th>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>15.0</td>
-      <td>17.5</td>
-      <td>20.0</td>
-      <td>-19.0</td>
-      <td>-20.5</td>
-      <td>-22.0</td>
-    </tr>
-    <tr>
-      <th>高价带(100+)</th>
-      <th>有提价空间(全弹性假设下毛利正增)</th>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>0.0</td>
-      <td>3.5</td>
-      <td>5.7</td>
-      <td>8.0</td>
-      <td>-5.5</td>
-      <td>-7.3</td>
-      <td>-9.0</td>
-    </tr>
-  </tbody>
-</table></div>
-<h2>④ 黑五大促复盘(2017-11-20 ~ 26 vs 前4周基线)</h2><div class="tw"><table><thead><tr><th>价格带</th><th>黑五周GMV</th><th>基线周GMV</th><th>GMV提升%</th><th>增量假设毛利(R$)</th></tr></thead><tbody><tr><td>中高价带(50-100)</td><td class="num">4,026.15</td><td class="num">1,630.23</td><td class="num">147.00</td><td class="num">838.57</td></tr><tr><td>低价带(<25)</td><td class="num">796.65</td><td class="num">99.54</td><td class="num">700.30</td><td class="num">139.42</td></tr><tr><td>高价带(100+)</td><td class="num">7,809.57</td><td class="num">2,287.20</td><td class="num">241.40</td><td class="num">2,208.94</td></tr><tr><td>中价带(25-50)</td><td class="num">1,318.65</td><td class="num">656.72</td><td class="num">100.80</td><td class="num">185.34</td></tr></tbody></table></div>
-<footer>category-management-sim · 求职作品(京东 TET 综合方向/采销) · 全部数字由 run_pipeline.py 生成并经跨模块 GMV 对账校验</footer>
 <script>
 (function(){
   var reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 矩阵热力着色(静态样式,始终执行) */
+  document.querySelectorAll('.pvt tbody td:not(.verd)').forEach(function(td){
+    var v=parseFloat(td.textContent);
+    if(isNaN(v))return;
+    if(v===0){td.classList.add('v0');return;}
+    var a=0.06+Math.min(Math.abs(v)/22,1)*0.34;
+    if(v>0){td.style.background='rgba(200,16,46,'+a.toFixed(3)+')';td.style.color='#7d0a1d';}
+    else{td.style.background='rgba(59,77,99,'+a.toFixed(3)+')';td.style.color='#2b3a4d';}
+  });
+
+  /* 阅读进度条 */
+  var prog=document.getElementById('prog'),ticking=false;
+  function onScroll(){
+    if(ticking)return;ticking=true;
+    requestAnimationFrame(function(){
+      var h=document.documentElement,max=h.scrollHeight-innerHeight;
+      prog.style.width=(max>0?(h.scrollTop/max*100):0)+'%';
+      ticking=false;
+    });
+  }
+  addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+  /* 导航当前章节高亮 */
+  var links={};document.querySelectorAll('nav a').forEach(function(a){links[a.getAttribute('href').slice(1)]=a});
+  if('IntersectionObserver' in window){
+    var nio=new IntersectionObserver(function(es){
+      es.forEach(function(en){
+        if(!en.isIntersecting)return;
+        Object.keys(links).forEach(function(k){links[k].classList.remove('act')});
+        links[en.target.id]&&links[en.target.id].classList.add('act');
+      });
+    },{rootMargin:'-30% 0px -60% 0px'});
+    document.querySelectorAll('.ex').forEach(function(s){nio.observe(s)});
+  }
+
   if(reduced||!('IntersectionObserver' in window)){
     document.querySelectorAll('.tw').forEach(function(t){t.classList.add('bars-on')});
     return;
   }
-  // 1) KPI 数字滚动(保留前缀/千分位/小数位/后缀)
+
+  /* KPI 数字滚动(保留前缀/千分位/小数位/后缀) */
   function countUp(el){
     var raw=el.textContent;
     var m=raw.match(/^([^\d\-+]*[+\-]?)([\d,]+(?:\.\d+)?)(.*)$/);
@@ -166,15 +353,16 @@ tbody tr:hover td{background:#fff4f5}
     function step(ts){
       if(!t0)t0=ts;
       var p=Math.min((ts-t0)/DUR,1);
-      var e=1-Math.pow(1-p,3); // easeOutCubic
+      var e=1-Math.pow(1-p,3);
       el.textContent=fmt(target*e);
       if(p<1)requestAnimationFrame(step);else el.textContent=raw;
     }
     requestAnimationFrame(step);
   }
-  // 2) 滚动入场:视口下方的区块加 reveal,进入视口后淡入上移
+
+  /* 滚动入场 */
   var below=[];
-  document.querySelectorAll('h2,.tw,.note,.kpis').forEach(function(el){
+  document.querySelectorAll('.ex-head,.tw,.note,.kpis,.src,.rule-note').forEach(function(el){
     if(el.getBoundingClientRect().top>innerHeight*0.92){el.classList.add('reveal');below.push(el);}
   });
   var io=new IntersectionObserver(function(es){
@@ -183,13 +371,15 @@ tbody tr:hover td{background:#fff4f5}
       en.target.classList.add('on','bars-on');
       io.unobserve(en.target);
     });
-  },{threshold:0.12});
+  },{threshold:0.1});
   below.forEach(function(el){io.observe(el)});
-  // 3) 首屏内的表格:加载后立即生长条形图;KPI 立即滚数
+
+  /* 首屏元素立即触发 */
   document.querySelectorAll('.tw').forEach(function(t){
     if(t.getBoundingClientRect().top<=innerHeight*0.92)requestAnimationFrame(function(){t.classList.add('bars-on')});
   });
   document.querySelectorAll('.kpi b').forEach(countUp);
 })();
 </script>
-</body></html>
+</body>
+</html>
