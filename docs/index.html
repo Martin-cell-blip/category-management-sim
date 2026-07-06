@@ -18,6 +18,18 @@ tr:nth-child(even) td{background:#fbfbfb}.num{text-align:right;font-variant-nume
 .bar{height:5px;background:#eee;border-radius:3px;margin-top:3px;min-width:90px}.bar i{display:block;height:100%;border-radius:3px}
 .pvt{width:100%;background:#fff;font-size:12px}.pvt th,.pvt td{padding:6px 8px;border:1px solid var(--line);text-align:right}
 footer{margin-top:40px;font-size:12px;color:var(--mut)}
+@media (prefers-reduced-motion:no-preference){
+h1{animation:fadeDown .5s ease both}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.kpi{transition:transform .25s ease,box-shadow .25s ease}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(200,16,46,.10)}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+.reveal.on{opacity:1;transform:none}
+.bar i{transform:scaleX(0);transform-origin:left;transition:transform .9s cubic-bezier(.22,.61,.36,1)}
+.bars-on .bar i{transform:scaleX(1)}
+tbody tr{transition:background .15s ease}
+tbody tr:hover td{background:#fff4f5}
+}
 @media print{body{background:#fff;padding:0}}
 </style></head><body>
 <h1>家居日用品类 · 采销经营模拟盘</h1>
@@ -129,4 +141,55 @@ footer{margin-top:40px;font-size:12px;color:var(--mut)}
 </table></div>
 <h2>④ 黑五大促复盘(2017-11-20 ~ 26 vs 前4周基线)</h2><div class="tw"><table><thead><tr><th>价格带</th><th>黑五周GMV</th><th>基线周GMV</th><th>GMV提升%</th><th>增量假设毛利(R$)</th></tr></thead><tbody><tr><td>中高价带(50-100)</td><td class="num">4,026.15</td><td class="num">1,630.23</td><td class="num">147.00</td><td class="num">838.57</td></tr><tr><td>低价带(<25)</td><td class="num">796.65</td><td class="num">99.54</td><td class="num">700.30</td><td class="num">139.42</td></tr><tr><td>高价带(100+)</td><td class="num">7,809.57</td><td class="num">2,287.20</td><td class="num">241.40</td><td class="num">2,208.94</td></tr><tr><td>中价带(25-50)</td><td class="num">1,318.65</td><td class="num">656.72</td><td class="num">100.80</td><td class="num">185.34</td></tr></tbody></table></div>
 <footer>category-management-sim · 求职作品(京东 TET 综合方向/采销) · 全部数字由 run_pipeline.py 生成并经跨模块 GMV 对账校验</footer>
+<script>
+(function(){
+  var reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced||!('IntersectionObserver' in window)){
+    document.querySelectorAll('.tw').forEach(function(t){t.classList.add('bars-on')});
+    return;
+  }
+  // 1) KPI 数字滚动(保留前缀/千分位/小数位/后缀)
+  function countUp(el){
+    var raw=el.textContent;
+    var m=raw.match(/^([^\d\-+]*[+\-]?)([\d,]+(?:\.\d+)?)(.*)$/);
+    if(!m)return;
+    var prefix=m[1],suffix=m[3];
+    var decimals=(m[2].split('.')[1]||'').length;
+    var target=parseFloat(m[2].replace(/,/g,''));
+    var hasComma=m[2].indexOf(',')>-1;
+    var t0=null,DUR=1100;
+    function fmt(v){
+      var s=v.toFixed(decimals);
+      if(hasComma){var p=s.split('.');p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');s=p.join('.');}
+      return prefix+s+suffix;
+    }
+    function step(ts){
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/DUR,1);
+      var e=1-Math.pow(1-p,3); // easeOutCubic
+      el.textContent=fmt(target*e);
+      if(p<1)requestAnimationFrame(step);else el.textContent=raw;
+    }
+    requestAnimationFrame(step);
+  }
+  // 2) 滚动入场:视口下方的区块加 reveal,进入视口后淡入上移
+  var below=[];
+  document.querySelectorAll('h2,.tw,.note,.kpis').forEach(function(el){
+    if(el.getBoundingClientRect().top>innerHeight*0.92){el.classList.add('reveal');below.push(el);}
+  });
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(en){
+      if(!en.isIntersecting)return;
+      en.target.classList.add('on','bars-on');
+      io.unobserve(en.target);
+    });
+  },{threshold:0.12});
+  below.forEach(function(el){io.observe(el)});
+  // 3) 首屏内的表格:加载后立即生长条形图;KPI 立即滚数
+  document.querySelectorAll('.tw').forEach(function(t){
+    if(t.getBoundingClientRect().top<=innerHeight*0.92)requestAnimationFrame(function(){t.classList.add('bars-on')});
+  });
+  document.querySelectorAll('.kpi b').forEach(countUp);
+})();
+</script>
 </body></html>
