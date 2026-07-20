@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="可输入模拟数据的家居日用品类采销经营决策台：测算调价、弹性、汰换和大促情景。">
+  <title>采销经营情景台｜交互演示</title>
+  <style>
+    :root{
+      --red:#c8102e;--red-deep:#8f0b20;--ink:#1d1f26;--ink2:#50535c;--muted:#817b6d;
+      --paper:#f2efe6;--sheet:#fdfcf8;--line:#ded7c6;--soft:#f6f2e8;--blue:#3b4d63;
+      --serif:"Times New Roman",Georgia,"Songti SC","SimSun",serif;
+      --sans:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+      --mono:Consolas,"SFMono-Regular",monospace;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;color:var(--ink);font:14px/1.7 var(--sans);
+      background:radial-gradient(1000px 420px at 50% -180px,rgba(200,16,46,.07),transparent 64%),var(--paper);
+      padding:28px 3vw 48px;
+    }
+    button,input,select{font:inherit}
+    a{color:inherit}
+    .shell{max-width:1180px;margin:auto;background:var(--sheet);border:1px solid var(--line);box-shadow:0 24px 70px -38px rgba(29,31,38,.35)}
+    header{border-top:6px solid var(--red);padding:24px 34px 22px;border-bottom:2px solid var(--ink)}
+    .header-top,.links,.preset-row,.actions,.result-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .header-top{justify-content:space-between}
+    .kicker{margin:0;color:var(--red);font:700 11px/1 var(--serif);letter-spacing:.25em;text-transform:uppercase}
+    h1{margin:15px 0 4px;font:700 clamp(30px,4vw,46px)/1.2 var(--serif);letter-spacing:.04em}
+    .lede{max-width:760px;margin:0;color:var(--ink2)}
+    .links a{font-size:13px;text-decoration:none;border-bottom:1px solid var(--line);padding:5px 0}
+    .links a:first-child{color:var(--red-deep);border-color:rgba(200,16,46,.45)}
+    .mode{font:12px var(--mono);color:var(--muted);border:1px solid var(--line);padding:7px 10px;background:var(--soft)}
+    main{display:grid;grid-template-columns:minmax(300px,390px) 1fr;min-height:690px}
+    aside{padding:28px 28px 34px;border-right:1px solid var(--line);background:rgba(246,242,232,.5)}
+    article{padding:28px 34px 36px;min-width:0}
+    h2{margin:0 0 5px;font:700 19px/1.4 var(--sans)}
+    .section-note{margin:0 0 18px;color:var(--muted);font-size:12px}
+    .preset-row{margin-bottom:20px}
+    .preset{border:1px solid var(--line);background:var(--sheet);padding:7px 9px;cursor:pointer;color:var(--ink2)}
+    .preset:hover,.preset:focus-visible{border-color:var(--red);color:var(--red-deep)}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+    label{display:grid;gap:6px;color:var(--ink2);font-size:12px}
+    label.wide{grid-column:1/-1}
+    input,select{width:100%;min-height:43px;border:1px solid #cfc7b5;background:#fff;color:var(--ink);padding:8px 9px;border-radius:0}
+    input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid rgba(200,16,46,.22);outline-offset:2px}
+    .unit{position:relative}
+    .unit input{padding-right:35px}
+    .unit span{position:absolute;right:10px;top:11px;color:var(--muted);font:12px var(--mono)}
+    .field-help{font-size:10.5px;color:var(--muted);line-height:1.45}
+    .actions{margin-top:22px}
+    .primary,.secondary{min-height:43px;padding:9px 15px;border:1px solid var(--red);cursor:pointer}
+    .primary{background:var(--red);color:#fff;font-weight:700}
+    .secondary{background:transparent;color:var(--red-deep)}
+    .status{min-height:22px;margin-top:10px;color:var(--red-deep);font-size:12px}
+    .result-head{justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:16px}
+    .decision{display:inline-flex;align-items:center;gap:8px;color:var(--red-deep);font-weight:700}
+    .decision::before{content:"";width:9px;height:9px;background:var(--red);border-radius:50%}
+    .decision.caution{color:var(--blue)}
+    .decision.caution::before{background:var(--blue)}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line);margin:22px 0}
+    .kpi{padding:3px 18px 18px;border-left:1px solid var(--line)}
+    .kpi:first-child{border-left:0;padding-left:0}
+    .kpi b{display:block;font:700 clamp(24px,3vw,34px)/1.2 var(--serif);color:var(--red);font-variant-numeric:tabular-nums}
+    .kpi span{color:var(--muted);font-size:11px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
+    .panel{border:1px solid var(--line);padding:18px;background:#fff}
+    .panel h3{margin:0 0 14px;font-size:13px;letter-spacing:.04em}
+    .compare{display:grid;gap:15px}
+    .bar-row{display:grid;grid-template-columns:72px 1fr 90px;gap:10px;align-items:center;font-size:12px}
+    .track{height:8px;background:#eee9df;overflow:hidden}
+    .bar{height:100%;background:var(--blue);width:0}
+    .bar.scenario{background:var(--red)}
+    .bar-row strong{text-align:right;font:600 13px var(--serif);font-variant-numeric:tabular-nums}
+    dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 14px}
+    dt{color:var(--muted)}
+    dd{margin:0;text-align:right;font-family:var(--serif);font-variant-numeric:tabular-nums}
+    .memo{margin-top:20px;border-top:2px solid var(--red);background:rgba(200,16,46,.035);padding:14px 17px;color:var(--ink2)}
+    .memo b{color:var(--red-deep)}
+    .assumption{margin-top:18px;padding-top:15px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+    footer{padding:16px 34px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+    code{font-family:var(--mono)}
+    @media(max-width:860px){
+      body{padding:0}.shell{border:0}main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}
+      .grid{grid-template-columns:1fr}
+    }
+    @media(max-width:560px){
+      header,article,footer{padding-left:20px;padding-right:20px}aside{padding:24px 20px}.form-grid{grid-template-columns:1fr}
+      label.wide{grid-column:auto}.kpis{grid-template-columns:1fr}.kpi,.kpi:first-child{padding:12px 0;border-left:0;border-top:1px solid var(--line)}
+      .kpi:first-child{border-top:0}.bar-row{grid-template-columns:62px 1fr 80px}
+    }
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="header-top">
+        <p class="kicker">Category Management / Scenario Lab</p>
+        <span class="mode">浏览器本地计算 · 不上传数据</span>
+      </div>
+      <h1>采销经营情景台</h1>
+      <p class="lede">输入价格带、调价、弹性、汰换与大促假设，即时查看 GMV、毛利和货盘保留影响。它用于展示决策方法，不把敏感性假设伪装成预测。</p>
+      <nav class="links" aria-label="项目链接">
+        <a href="index.html">查看经管线核验的静态看板</a>
+        <a href="research/">阅读行业研究</a>
+        <a href="https://github.com/Martin-cell-blip/category-management-sim" target="_blank" rel="noreferrer">查看源码与复现说明 ↗</a>
+      </nav>
+    </header>
+    <main>
+      <aside>
+        <h2>01 / 输入经营假设</h2>
+        <p class="section-note">可直接修改数字，或从三个典型经营动作开始。</p>
+        <div class="preset-row" aria-label="预设情景">
+          <button class="preset" type="button" data-preset="premium">高价带提价</button>
+          <button class="preset" type="button" data-preset="traffic">低价带保价</button>
+          <button class="preset" type="button" data-preset="promo">大促流量</button>
+        </div>
+        <form id="scenario-form">
+          <div class="form-grid">
+            <label class="wide">价格带
+              <select id="band">
+                <option value="low">低价带（&lt;25）</option>
+                <option value="mid">中价带（25–50）</option>
+                <option value="midHigh">中高价带（50–100）</option>
+                <option value="high" selected>高价带（100+）</option>
+              </select>
+            </label>
+            <label>基准 GMV
+              <span class="unit"><input id="base-gmv" type="number" min="1" step="100" value="385136" required><span>R$</span></span>
+            </label>
+            <label>假设毛利率
+              <span class="unit"><input id="margin" type="number" min="1" max="90" step="1" value="40" required><span>%</span></span>
+            </label>
+            <label>调价幅度
+              <span class="unit"><input id="price-change" type="number" min="-20" max="20" step="0.5" value="5" required><span>%</span></span>
+              <small class="field-help">正数为提价，负数为降价</small>
+            </label>
+            <label>价格弹性
+              <select id="elasticity">
+                <option value="-0.8">-0.8（低敏感）</option>
+                <option value="-1.2" selected>-1.2（中性）</option>
+                <option value="-1.6">-1.6（高敏感）</option>
+              </select>
+              <small class="field-help">敏感性参数，不是统计估计值</small>
+            </label>
+            <label>汰换 SKU 占比
+              <span class="unit"><input id="delist-share" type="number" min="0" max="50" step="0.1" value="15.6" required><span>%</span></span>
+            </label>
+            <label>被汰换 SKU 的 GMV 占比
+              <span class="unit"><input id="affected-gmv" type="number" min="0" max="100" step="0.1" value="9.6" required><span>%</span></span>
+            </label>
+            <label>大促流量提升
+              <span class="unit"><input id="traffic-lift" type="number" min="-50" max="1000" step="1" value="0" required><span>%</span></span>
+            </label>
+            <label>大促额外折扣
+              <span class="unit"><input id="promo-discount" type="number" min="0" max="50" step="0.5" value="0" required><span>%</span></span>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="primary" type="submit">运行情景测算</button>
+            <button class="secondary" type="button" id="reset">恢复基准</button>
+          </div>
+          <div class="status" id="form-status" role="status" aria-live="polite"></div>
+        </form>
+      </aside>
+      <article>
+        <div class="result-head">
+          <div>
+            <h2>02 / 经营结果</h2>
+            <p class="section-note" id="scenario-label">高价带 · 提价 +5% · 弹性 -1.2</p>
+          </div>
+          <span class="decision" id="decision">建议：高价带可小步提价并监测转化</span>
+        </div>
+        <section class="kpis" aria-label="关键结果">
+          <div class="kpi"><b id="gmv-output">R$404,393</b><span>调价与弹性后的 GMV</span></div>
+          <div class="kpi"><b id="gp-output">R$170,786</b><span>情景毛利额</span></div>
+          <div class="kpi"><b id="retention-output">90.4%</b><span>执行汰换后的 GMV 保留率</span></div>
+        </section>
+        <div class="grid">
+          <section class="panel">
+            <h3>基准 vs 情景</h3>
+            <div class="compare">
+              <div class="bar-row"><span>基准 GMV</span><div class="track"><div class="bar" id="base-gmv-bar"></div></div><strong id="base-gmv-label"></strong></div>
+              <div class="bar-row"><span>情景 GMV</span><div class="track"><div class="bar scenario" id="scenario-gmv-bar"></div></div><strong id="scenario-gmv-label"></strong></div>
+              <div class="bar-row"><span>基准毛利</span><div class="track"><div class="bar" id="base-gp-bar"></div></div><strong id="base-gp-label"></strong></div>
+              <div class="bar-row"><span>情景毛利</span><div class="track"><div class="bar scenario" id="scenario-gp-bar"></div></div><strong id="scenario-gp-label"></strong></div>
+            </div>
+          </section>
+          <section class="panel">
+            <h3>计算底稿</h3>
+            <dl>
+              <dt>销量变化</dt><dd id="volume-delta">-6.0%</dd>
+              <dt>GMV 变化</dt><dd id="gmv-delta">+3.0%</dd>
+              <dt>毛利变化</dt><dd id="gp-delta">+10.8%</dd>
+              <dt>汰换资源效率</dt><dd id="delist-efficiency">1.63×</dd>
+              <dt>大促后 GMV</dt><dd id="promo-gmv">R$365,571</dd>
+              <dt>大促后毛利</dt><dd id="promo-gp">R$154,392</dd>
+            </dl>
+          </section>
+        </div>
+        <p class="memo" id="memo"><b>决策备忘：</b>高价带是供给不足的机会带；在当前弹性假设下，小幅提价仍可提升毛利。先对功能溢价款做 A/B 验证，低价带继续承担引流任务。</p>
+        <p class="assumption">计算口径：销量系数 = 1 + 弹性 × 调价幅度；单位成本在短期内保持不变；大促流量与折扣叠加在调价情景之后；汰换影响按输入的 GMV 占比近似。默认参数来自项目的 <code>params/cost_assumptions.csv</code> 与 <code>params/decision_rules.md</code>。所有结果均为模拟数据，不构成真实经营预测。</p>
+      </article>
+    </main>
+    <footer>
+      <span>category-management-sim · interactive scenario lab</span>
+      <span>真实基准由 Olist 公开数据管线生成；本页输入仅在浏览器内计算</span>
+    </footer>
+  </div>
+  <script>
+    const bands = {
+      low:{label:'低价带（<25）',gmv:18866,margin:20,position:'供给过密 / 流量入口'},
+      mid:{label:'中价带（25–50）',gmv:70952,margin:28,position:'供给过密 / 汰换优先'},
+      midHigh:{label:'中高价带（50–100）',gmv:140674,margin:35,position:'供需均衡 / 精细控价'},
+      high:{label:'高价带（100+）',gmv:385136,margin:40,position:'供给不足 / 机会带'}
+    };
+    const defaults = {band:'high',price:5,elasticity:-1.2,delist:15.6,affected:9.6,traffic:0,discount:0};
+    const money = new Intl.NumberFormat('zh-CN',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+    const num = id => Number(document.getElementById(id).value);
+    const pct = value => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+    const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
+
+    function setValues(values){
+      const band = values.band || document.getElementById('band').value;
+      document.getElementById('band').value = band;
+      document.getElementById('base-gmv').value = values.gmv ?? bands[band].gmv;
+      document.getElementById('margin').value = values.margin ?? bands[band].margin;
+      document.getElementById('price-change').value = values.price ?? 0;
+      document.getElementById('elasticity').value = String(values.elasticity ?? -1.2);
+      document.getElementById('delist-share').value = values.delist ?? 15.6;
+      document.getElementById('affected-gmv').value = values.affected ?? 9.6;
+      document.getElementById('traffic-lift').value = values.traffic ?? 0;
+      document.getElementById('promo-discount').value = values.discount ?? 0;
+      calculate();
+    }
+
+    function calculate(event){
+      if(event) event.preventDefault();
+      const formStatus = document.getElementById('form-status');
+      const bandKey = document.getElementById('band').value;
+      const band = bands[bandKey];
+      const base = num('base-gmv');
+      const margin = num('margin') / 100;
+      const priceMove = num('price-change') / 100;
+      const elasticity = num('elasticity');
+      const delist = num('delist-share') / 100;
+      const affected = num('affected-gmv') / 100;
+      const traffic = num('traffic-lift') / 100;
+      const discount = num('promo-discount') / 100;
+      const values = [base,margin,priceMove,elasticity,delist,affected,traffic,discount];
+      if(!values.every(Number.isFinite) || base <= 0 || margin <= 0 || margin >= .9 || affected < 0 || affected > 1 || delist < 0 || delist > .5 || discount < 0 || discount > .5){
+        formStatus.textContent = '请检查输入：GMV 须大于 0，比例字段需落在页面给出的范围内。';
+        return;
+      }
+      const volumeFactor = Math.max(0,1 + elasticity * priceMove);
+      const scenarioGmv = base * (1 + priceMove) * volumeFactor;
+      const baseGp = base * margin;
+      const scenarioGp = base * volumeFactor * ((1 + priceMove) - (1 - margin));
+      const retention = 1 - affected;
+      const retainedGmv = scenarioGmv * retention;
+      const retainedQtyFactor = volumeFactor * retention;
+      const promoGmv = base * retainedQtyFactor * (1 + traffic) * (1 + priceMove) * (1 - discount);
+      const promoGp = base * retainedQtyFactor * (1 + traffic) * (((1 + priceMove) * (1 - discount)) - (1 - margin));
+      const volumeDelta = (volumeFactor - 1) * 100;
+      const gmvDelta = (scenarioGmv / base - 1) * 100;
+      const gpDelta = (scenarioGp / baseGp - 1) * 100;
+      const efficiency = affected > 0 ? delist / affected : 0;
+
+      document.getElementById('scenario-label').textContent = `${band.label} · 调价 ${pct(priceMove*100)} · 弹性 ${elasticity} · ${band.position}`;
+      document.getElementById('gmv-output').textContent = money.format(scenarioGmv);
+      document.getElementById('gp-output').textContent = money.format(scenarioGp);
+      document.getElementById('retention-output').textContent = `${(retention*100).toFixed(1)}%`;
+      document.getElementById('volume-delta').textContent = pct(volumeDelta);
+      document.getElementById('gmv-delta').textContent = pct(gmvDelta);
+      document.getElementById('gp-delta').textContent = pct(gpDelta);
+      document.getElementById('delist-efficiency').textContent = affected > 0 ? `${efficiency.toFixed(2)}×` : '—';
+      document.getElementById('promo-gmv').textContent = money.format(promoGmv);
+      document.getElementById('promo-gp').textContent = money.format(promoGp);
+
+      const maxValue = Math.max(base,scenarioGmv,baseGp,Math.max(0,scenarioGp),1);
+      const bars = [
+        ['base-gmv-bar',base],['scenario-gmv-bar',scenarioGmv],['base-gp-bar',baseGp],['scenario-gp-bar',Math.max(0,scenarioGp)]
+      ];
+      bars.forEach(([id,value]) => document.getElementById(id).style.width = `${clamp(value/maxValue*100,2,100)}%`);
+      document.getElementById('base-gmv-label').textContent = money.format(base);
+      document.getElementById('scenario-gmv-label').textContent = money.format(scenarioGmv);
+      document.getElementById('base-gp-label').textContent = money.format(baseGp);
+      document.getElementById('scenario-gp-label').textContent = money.format(scenarioGp);
+
+      let decision = '', memo = '', cautious = false;
+      if(bandKey === 'high' && priceMove > 0 && gpDelta > 0){
+        decision = '建议：高价带可小步提价并监测转化';
+        memo = '高价带是供给不足的机会带；在当前弹性假设下，小幅提价仍可提升毛利。先对功能溢价款做 A/B 验证，低价带继续承担引流任务。';
+      } else if(bandKey === 'low' && priceMove > 0){
+        decision = '谨慎：低价带优先保价引流';
+        memo = '即使毛利测算为正，也不等于应该提价。低价带承担流量入口角色，建议把毛利改善放在直采、包材与履约优化上。';
+        cautious = true;
+      } else if(gpDelta < 0 || promoGp < 0){
+        decision = '预警：当前参数侵蚀毛利';
+        memo = '情景毛利低于基准或已转负。先收窄降价/折扣幅度，拆分流量增量与价格让利，再决定是否投放。';
+        cautious = true;
+      } else if(traffic > 0){
+        decision = '建议：以流量资源为主，折扣为辅';
+        memo = '当前大促情景主要由流量驱动。建议优先争取曝光、凑单与会场坑位，并设置毛利底线，避免一刀切深折扣。';
+      } else if(efficiency >= 1.4){
+        decision = '建议：执行低效 SKU 汰换';
+        memo = `计划汰换 ${(delist*100).toFixed(1)}% 的 SKU，仅影响 ${(affected*100).toFixed(1)}% GMV，资源效率为 ${efficiency.toFixed(2)}×；释放的坑位优先补给机会带。`;
+      } else {
+        decision = '建议：先缩小试验范围';
+        memo = '当前情景收益有限或货盘影响偏大。建议先按子类目、卖家或 SKU 群做小样本验证，再扩大动作范围。';
+        cautious = true;
+      }
+      const decisionEl = document.getElementById('decision');
+      decisionEl.textContent = decision;
+      decisionEl.classList.toggle('caution',cautious);
+      document.getElementById('memo').innerHTML = `<b>决策备忘：</b>${memo}`;
+      formStatus.textContent = `测算已更新：${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+    }
+
+    document.getElementById('scenario-form').addEventListener('submit',calculate);
+    document.getElementById('band').addEventListener('change',event => {
+      const band = bands[event.target.value];
+      document.getElementById('base-gmv').value = band.gmv;
+      document.getElementById('margin').value = band.margin;
+      calculate();
+    });
+    document.querySelectorAll('#scenario-form input,#scenario-form select').forEach(input => input.addEventListener('change',calculate));
+    document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click',() => {
+      const presets = {
+        premium:{band:'high',price:5,elasticity:-1.2,traffic:0,discount:0},
+        traffic:{band:'low',price:0,elasticity:-1.6,traffic:0,discount:0},
+        promo:{band:'high',price:0,elasticity:-1.2,traffic:198,discount:2}
+      };
+      setValues({...defaults,...presets[button.dataset.preset]});
+    }));
+    document.getElementById('reset').addEventListener('click',() => setValues(defaults));
+    calculate();
+  </script>
+</body>
+</html>

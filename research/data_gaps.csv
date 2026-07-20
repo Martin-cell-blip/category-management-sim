@@ -1,0 +1,15 @@
+gap_id,description,impact,owner,status
+B1,三子类权威全渠道市场规模,high,category_research,open
+B2,收纳整理线下渠道销售额,medium,category_research,open
+B3,手动清洁工具分品类销售额,medium,category_research,open
+B5,塑料日用制品零售端口径,medium,category_research,open
+B6,主要品牌连续市占率,medium,category_research,open
+B7,京东自有品牌品类销售数据,high,internal_data,open
+B8,三子类占京东日百收入比例,maximum,internal_data,open
+B9,京东系线上份额精确值,high,internal_data,open
+B10,平台退货率与质量成本,high,internal_data,open
+B11,价格带与毛利率内部数据,high,internal_data,open
+B12,海关HS39月度出口增速,medium,external_data,open
+B13,产业带商家供给与履约数据,medium,internal_data,open
+B14,京东品类层级口径映射,high,internal_data,open
+B15,功能集成品长期复购与退货,medium,category_research,open

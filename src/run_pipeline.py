@@ -5,40 +5,45 @@ run_pipeline.py — 京东采销·家居日用品类经营模拟盘 一键管线
 运行:python src/run_pipeline.py   (自动含数据下载与跨模块对账校验)
 """
 from __future__ import annotations
+import hashlib
+import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import pandas as pd
 
+try:
+    from .config import load_config
+except ImportError:
+    from config import load_config
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output"
 OUT.mkdir(exist_ok=True)
-
-MAIN_CAT = "housewares"                       # 主品类(对齐行研"家居日用"边界)
-BENCH_CATS = ["bed_bath_table", "furniture_decor"]  # 对照品类
-
-# 模块2 评分卡权重(依据见 params/decision_rules.md R2)
-W_GMV, W_VELOCITY, W_REVIEW, W_FREIGHT = 0.35, 0.25, 0.25, 0.15
-DELIST_PCT = 0.15          # 综合分末位 15% 进入汰换候补
-HARD_REVIEW_FLOOR = 3.0    # 硬规则:均分 < 3.0 且销量>=3 直接汰换
-GAP_RATIO = 1.25           # 模块1:GMV份额/SKU份额 > 1.25 判定为"供给不足带"
-
-# 模块3 情景参数(弹性为敏感性假设,非估计值;见 decision_rules.md R3)
-PRICE_MOVES = [-0.05, 0.0, 0.05]
-ELASTICITIES = [-0.8, -1.2, -1.6]
-
-# 模块4 黑五窗口(Olist 真实大促尖峰:2017-11-24)
-BF_START, BF_END = "2017-11-20", "2017-11-26"
-BASE_START, BASE_END = "2017-10-23", "2017-11-19"   # 前 4 周基线
+CONFIG_PATH = ROOT / "params/pipeline_config.json"
+CONFIG = load_config(CONFIG_PATH)
+MAIN_CAT = CONFIG["main_category"]
+BENCH_CATS = CONFIG["benchmark_categories"]
+WEIGHTS = CONFIG["scoring_weights"]
+THRESHOLDS = CONFIG["thresholds"]
+PRICE_MOVES = CONFIG["pricing"]["price_moves"]
+ELASTICITIES = CONFIG["pricing"]["elasticities"]
+PROMO = CONFIG["promotion_windows"]
 
 
 def setup(con: duckdb.DuckDBPyConnection) -> None:
     """下载数据(如缺)并建底表。"""
     if not (ROOT / "data/raw/olist_products_dataset.csv").exists():
         subprocess.check_call([sys.executable, str(ROOT / "src/fetch_olist.py")], cwd=ROOT)
-    con.execute((ROOT / "sql/01_setup.sql").read_text(encoding="utf-8"))
+    categories = [MAIN_CAT, *BENCH_CATS]
+    categories_sql = ", ".join("'" + value.replace("'", "''") + "'" for value in categories)
+    sql = (ROOT / "sql/01_setup.sql").read_text(encoding="utf-8").format(
+        categories_sql=categories_sql
+    )
+    con.execute(sql)
 
 
 def load_margins() -> pd.DataFrame:
@@ -62,7 +67,9 @@ def m1_price_band(con) -> pd.DataFrame:
     df["gmv_share"] = (df["gmv"] / tot["gmv"]).round(4)
     df["gap_ratio"] = (df["gmv_share"] / df["sku_share"]).round(2)
     df["band_verdict"] = df["gap_ratio"].map(
-        lambda r: "供给不足(机会带)" if r > GAP_RATIO else ("供给过密" if r < 1 / GAP_RATIO else "均衡")
+        lambda r: "供给不足(机会带)"
+        if r > THRESHOLDS["gap_ratio"]
+        else ("供给过密" if r < 1 / THRESHOLDS["gap_ratio"] else "均衡")
     )
     df = df.sort_values(["cat", "price_band"])
     df.to_csv(OUT / "m1_price_band_matrix.csv", index=False, encoding="utf-8-sig")
@@ -89,23 +96,31 @@ def m2_scorecard(con) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         return (1 - r) if inverse else r
 
     sku["score"] = (
-        W_GMV * norm(sku["gmv"])
-        + W_VELOCITY * norm(sku["velocity"])
-        + W_REVIEW * norm(sku["avg_review"].fillna(sku["avg_review"].median()))
-        + W_FREIGHT * norm(sku["freight_ratio"].fillna(sku["freight_ratio"].median()), inverse=True)
+        WEIGHTS["gmv"] * norm(sku["gmv"])
+        + WEIGHTS["velocity"] * norm(sku["velocity"])
+        + WEIGHTS["review"] * norm(sku["avg_review"].fillna(sku["avg_review"].median()))
+        + WEIGHTS["freight"] * norm(
+            sku["freight_ratio"].fillna(sku["freight_ratio"].median()), inverse=True
+        )
     ).round(4)
     sku = sku.sort_values("score", ascending=False)
     sku.to_csv(OUT / "m2_sku_scorecard.csv", index=False, encoding="utf-8-sig")
 
     # 汰换:综合分末位 15%,或硬规则(差评+有一定销量,非偶发)
-    cutoff = sku["score"].quantile(DELIST_PCT)
+    cutoff = sku["score"].quantile(THRESHOLDS["delist_percentile"])
     delist = sku[
         (sku["score"] <= cutoff)
-        | ((sku["avg_review"] < HARD_REVIEW_FLOOR) & (sku["items"] >= 3))
+        | (
+            (sku["avg_review"] < THRESHOLDS["hard_review_floor"])
+            & (sku["items"] >= THRESHOLDS["hard_review_min_items"])
+        )
     ].copy()
     delist["reason"] = delist.apply(
         lambda r: "差评硬规则(均分<3.0且销量≥3)"
-        if (r["avg_review"] < HARD_REVIEW_FLOOR and r["items"] >= 3)
+        if (
+            r["avg_review"] < THRESHOLDS["hard_review_floor"]
+            and r["items"] >= THRESHOLDS["hard_review_min_items"]
+        )
         else "综合分末位15%", axis=1)
     delist.to_csv(OUT / "m2_delist_list.csv", index=False, encoding="utf-8-sig")
 
@@ -113,11 +128,17 @@ def m2_scorecard(con) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     m1 = pd.read_csv(OUT / "m1_price_band_matrix.csv")
     gap_bands = m1[(m1["cat"] == MAIN_CAT) & (m1["band_verdict"] == "供给不足(机会带)")]["price_band"].tolist()
     intro = (
-        sku[sku["price_band"].isin(gap_bands) & (sku["avg_review"] >= 4.5)]
+        sku[
+            sku["price_band"].isin(gap_bands)
+            & (sku["avg_review"] >= THRESHOLDS["intro_review_floor"])
+        ]
         .groupby("seller_id")
         .agg(skus=("product_id", "count"), gmv=("gmv", "sum"),
              avg_review=("avg_review", "mean"), band=("price_band", "first"))
-        .sort_values("gmv", ascending=False).head(15).round(2).reset_index()
+        .sort_values("gmv", ascending=False)
+        .head(THRESHOLDS["intro_seller_limit"])
+        .round(2)
+        .reset_index()
     )
     intro["action"] = "机会带优质卖家,建议谈判扩充货盘/独家款"
     intro.to_csv(OUT / "m2_intro_candidates.csv", index=False, encoding="utf-8-sig")
@@ -145,6 +166,8 @@ def m3_pricing(sku: pd.DataFrame, margins: pd.DataFrame) -> pd.DataFrame:
                 rows.append({
                     "price_band": b["price_band"], "price_move": f"{mv:+.0%}",
                     "elasticity": e,
+                    "base_gmv": round(float(b["gmv"]), 2),
+                    "base_gp": round(float(b["gp"]), 2),
                     "gmv_chg_pct": round((gmv_new / b["gmv"] - 1) * 100, 1),
                     "gp_chg_pct": round((gp_new / b["gp"] - 1) * 100, 1),
                 })
@@ -167,25 +190,26 @@ def m4_promo(con, margins: pd.DataFrame) -> pd.DataFrame:
         SELECT price_band, COUNT(*) items, SUM(price) gmv,
                COUNT(DISTINCT order_id) orders
         FROM fact_items
-        WHERE cat = '{MAIN_CAT}' AND ts BETWEEN '{BF_START}' AND '{BF_END} 23:59:59'
+        WHERE cat = '{MAIN_CAT}' AND ts BETWEEN '{PROMO["event_start"]}' AND '{PROMO["event_end"]} 23:59:59'
         GROUP BY 1
     """).df()
     base = con.execute(f"""
-        SELECT price_band, COUNT(*)/4.0 items_wk, SUM(price)/4.0 gmv_wk,
-               COUNT(DISTINCT order_id)/4.0 orders_wk
+        SELECT price_band, COUNT(*)/{PROMO["baseline_weeks"]} items_wk,
+               SUM(price)/{PROMO["baseline_weeks"]} gmv_wk,
+               COUNT(DISTINCT order_id)/{PROMO["baseline_weeks"]} orders_wk
         FROM fact_items
-        WHERE cat = '{MAIN_CAT}' AND ts BETWEEN '{BASE_START}' AND '{BASE_END} 23:59:59'
+        WHERE cat = '{MAIN_CAT}' AND ts BETWEEN '{PROMO["baseline_start"]}' AND '{PROMO["baseline_end"]} 23:59:59'
         GROUP BY 1
     """).df()
     # 让利 proxy:同一 SKU 黑五周均价 vs 基线周均价,降价部分 × 黑五销量
     disc = con.execute(f"""
         WITH bf AS (
             SELECT product_id, AVG(price) p_bf, COUNT(*) q_bf FROM fact_items
-            WHERE cat='{MAIN_CAT}' AND ts BETWEEN '{BF_START}' AND '{BF_END} 23:59:59'
+            WHERE cat='{MAIN_CAT}' AND ts BETWEEN '{PROMO["event_start"]}' AND '{PROMO["event_end"]} 23:59:59'
             GROUP BY 1),
         bl AS (
             SELECT product_id, AVG(price) p_bl FROM fact_items
-            WHERE cat='{MAIN_CAT}' AND ts BETWEEN '{BASE_START}' AND '{BASE_END} 23:59:59'
+            WHERE cat='{MAIN_CAT}' AND ts BETWEEN '{PROMO["baseline_start"]}' AND '{PROMO["baseline_end"]} 23:59:59'
             GROUP BY 1)
         SELECT COALESCE(SUM((bl.p_bl - bf.p_bf) * bf.q_bf), 0) AS discount_cost
         FROM bf JOIN bl USING (product_id) WHERE bf.p_bf < bl.p_bl
@@ -203,14 +227,102 @@ def m4_promo(con, margins: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def reconcile(con, m1: pd.DataFrame, sku: pd.DataFrame) -> None:
-    """跨模块 GMV 对账:m1 主品类合计 == m2 评分卡合计 == 底表直查,容差 0.01。"""
-    truth = con.execute(f"SELECT ROUND(SUM(price),2) FROM fact_items WHERE cat='{MAIN_CAT}'").fetchone()[0]
-    g1 = round(m1[m1["cat"] == MAIN_CAT]["gmv"].sum(), 2)
+def reconcile_frames(
+    truth: float,
+    promo_truth: float,
+    m1: pd.DataFrame,
+    sku: pd.DataFrame,
+    pricing: pd.DataFrame,
+    promo: pd.DataFrame,
+    main_category: str,
+    tolerance: float,
+) -> dict:
+    """Reconcile like-for-like measures and return a structured audit record."""
+    g1 = round(m1[m1["cat"] == main_category]["gmv"].sum(), 2)
     g2 = round(sku["gmv"].sum(), 2)
-    assert abs(g1 - truth) < 0.01 and abs(g2 - truth) < 0.01, \
-        f"[对账失败] 底表={truth} m1={g1} m2={g2}"
-    print(f"  [对账通过] 主品类 GMV 三处一致 = R${truth:,.2f}")
+    g3 = round(pricing.drop_duplicates("price_band")["base_gmv"].sum(), 2)
+    g4 = round(promo["gmv"].sum(), 2)
+    full_passed = bool(
+        all(abs(float(value) - float(truth)) <= tolerance for value in (g1, g2, g3))
+    )
+    promo_passed = bool(abs(float(g4) - float(promo_truth)) <= tolerance)
+    audit = {
+        "full_period": {
+            "base_table_gmv": round(float(truth), 2),
+            "m1_price_band_gmv": g1,
+            "m2_scorecard_gmv": g2,
+            "m3_pricing_baseline_gmv": g3,
+            "tolerance": tolerance,
+            "passed": full_passed,
+        },
+        "promotion_window": {
+            "base_table_gmv": round(float(promo_truth), 2),
+            "m4_promotion_gmv": g4,
+            "tolerance": tolerance,
+            "passed": promo_passed,
+        },
+    }
+    if not full_passed or not promo_passed:
+        raise AssertionError(f"[对账失败] {json.dumps(audit, ensure_ascii=False)}")
+    return audit
+
+
+def reconcile(con, m1, sku, pricing, promo) -> dict:
+    truth = con.execute(
+        f"SELECT COALESCE(ROUND(SUM(price),2),0) FROM fact_items WHERE cat='{MAIN_CAT}'"
+    ).fetchone()[0]
+    promo_truth = con.execute(
+        f"""SELECT COALESCE(ROUND(SUM(price),2),0) FROM fact_items
+            WHERE cat='{MAIN_CAT}' AND ts BETWEEN
+            '{PROMO["event_start"]}' AND '{PROMO["event_end"]} 23:59:59'"""
+    ).fetchone()[0]
+    audit = reconcile_frames(
+        truth,
+        promo_truth,
+        m1,
+        sku,
+        pricing,
+        promo,
+        MAIN_CAT,
+        CONFIG["reconciliation_tolerance"],
+    )
+    print(f"  [对账通过] 三大经营模块主品类 GMV 一致 = R${truth:,.2f}")
+    print(f"  [窗口校验通过] 大促窗口 GMV = R${promo_truth:,.2f}")
+    return audit
+
+
+def _fingerprint(path: Path) -> dict:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    return {
+        "path": path.relative_to(ROOT).as_posix(),
+        "sha256": digest,
+        "bytes": path.stat().st_size,
+    }
+
+
+def write_manifest(con, audit: dict, frames: dict[str, pd.DataFrame]) -> None:
+    inputs = sorted((ROOT / "data/raw").glob("*.csv"))
+    manifest = {
+        "manifest_version": "category-run-v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "policy_version": CONFIG["policy_version"],
+        "main_category": MAIN_CAT,
+        "benchmark_categories": BENCH_CATS,
+        "source_scope": {
+            "olist_orders": int(
+                con.execute("SELECT COUNT(DISTINCT order_id) FROM v_raw_items").fetchone()[0]
+            ),
+            "fact_item_rows": int(con.execute("SELECT COUNT(*) FROM fact_items").fetchone()[0]),
+            "note": "Olist 全量数据集下载后，仅分析配置中的主品类与对照品类。",
+        },
+        "configuration": _fingerprint(CONFIG_PATH),
+        "inputs": [_fingerprint(path) for path in inputs],
+        "outputs": {name: len(frame) for name, frame in frames.items()},
+        "reconciliation": audit,
+    }
+    (OUT / "run_manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def main() -> None:
@@ -220,9 +332,15 @@ def main() -> None:
     print("== 1. 品类结构与价格带 ==");  m1 = m1_price_band(con)
     print("== 2. 选品/汰换评分卡 ==");   sku, delist, intro = m2_scorecard(con)
     print(f"  评分卡 {len(sku)} SKU | 汰换 {len(delist)} | 引入候选卖家 {len(intro)}")
-    print("== 3. 毛利与控价情景 ==");    m3_pricing(sku, margins)
-    print("== 4. 黑五大促复盘 ==");      m4_promo(con, margins)
-    print("== 5. 跨模块对账 ==");        reconcile(con, m1, sku)
+    print("== 3. 毛利与控价情景 ==");    pricing = m3_pricing(sku, margins)
+    print("== 4. 黑五大促复盘 ==");      promo = m4_promo(con, margins)
+    print("== 5. 跨模块对账 ==");        audit = reconcile(con, m1, sku, pricing, promo)
+    write_manifest(
+        con,
+        audit,
+        {"m1": m1, "m2_scorecard": sku, "m2_delist": delist,
+         "m2_intro": intro, "m3": pricing, "m4": promo},
+    )
     print("== 6. 生成看板 ==")
     subprocess.check_call([sys.executable, str(ROOT / "src/build_dashboard.py")], cwd=ROOT)
     print(f"[完成] 决策产物见 {OUT},看板见 docs/index.html")

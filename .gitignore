@@ -2,3 +2,5 @@ data/raw/*.csv
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+output/run_manifest.json
+docs/research/research_manifest.json

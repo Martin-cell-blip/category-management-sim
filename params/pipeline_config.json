@@ -1,0 +1,31 @@
+{
+  "policy_version": "category-decision-v2",
+  "main_category": "housewares",
+  "benchmark_categories": ["bed_bath_table", "furniture_decor"],
+  "scoring_weights": {
+    "gmv": 0.35,
+    "velocity": 0.25,
+    "review": 0.25,
+    "freight": 0.15
+  },
+  "thresholds": {
+    "delist_percentile": 0.15,
+    "hard_review_floor": 3.0,
+    "hard_review_min_items": 3,
+    "gap_ratio": 1.25,
+    "intro_review_floor": 4.5,
+    "intro_seller_limit": 15
+  },
+  "pricing": {
+    "price_moves": [-0.05, 0.0, 0.05],
+    "elasticities": [-0.8, -1.2, -1.6]
+  },
+  "promotion_windows": {
+    "event_start": "2017-11-20",
+    "event_end": "2017-11-26",
+    "baseline_start": "2017-10-23",
+    "baseline_end": "2017-11-19",
+    "baseline_weeks": 4.0
+  },
+  "reconciliation_tolerance": 0.01
+}

@@ -1,0 +1,9 @@
+[
+  {"assumption_id": "A1", "name": "三子类占官方日用品口径比例", "base": "20%-35%", "sensitivity": "high"},
+  {"assumption_id": "A2", "name": "限额以上渠道覆盖修正", "base": "1.10-1.25", "sensitivity": "medium"},
+  {"assumption_id": "A3", "name": "制造端到零售端加价系数", "base": "2.0-2.5", "sensitivity": "medium"},
+  {"assumption_id": "A4", "name": "细分品类边界调整", "base": "排除家具和带电清洁", "sensitivity": "medium"},
+  {"assumption_id": "A5", "name": "三子类占京东日百收入比例", "base": "3%-5%", "sensitivity": "maximum", "data_gap": "B8"},
+  {"assumption_id": "A6", "name": "京东系线上份额", "base": "20%-25%", "sensitivity": "high"},
+  {"assumption_id": "A7", "name": "线上化率代理", "base": "60%", "sensitivity": "medium"}
+]

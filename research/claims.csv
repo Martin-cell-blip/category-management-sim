@@ -1,0 +1,9 @@
+claim_id,statement,claim_type,source_ids,assumption_ids,status,updated_at
+C001,2025年限额以上日用品类零售额8675亿元且同比增长6.3%,fact,S061,,supported,2026-07-20
+C002,京东日用百货2025年收入4187亿元且同比增长15.3%,fact,S062,,supported_secondary,2026-07-20
+C003,2026年一季度京东日百收入1126亿元且同比增长14.9%,fact,S112,,supported_secondary,2026-07-20
+C004,本报告三子类2025年全渠道规模约1500至2500亿元,estimate,S061;S062;S007;S009,A1;A2;A3;A4;A5;A6;A7,assumption_sensitive,2026-07-20
+C005,行业总量成熟但线上渠道与平台份额迁移仍提供结构性机会,inference,S005;S061;S062;S111;S112,,triangulated,2026-07-20
+C006,京东品类经营应优先关注份额与供给结构而非依赖行业总量增长,recommendation,S061;S062;S111;S112,A5;A6,decision_use,2026-07-20
+C007,普通家居日用品不直接受以旧换新补贴覆盖,fact,S092,,supported,2026-07-20
+C008,PP原料价格是低价货盘毛利的重要监测变量,inference,S116,,watchlist,2026-07-20
