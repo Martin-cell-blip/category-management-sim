@@ -60,7 +60,7 @@
 |---|---|
 | Day 1 | 数据补拉 + SQL 底表 + 模块 1/2 |
 | Day 2 | 模块 3/4 + 看板 |
-| Day 3 | 一页策略 + README + Pages 发布 + 简历 bullet 更新 |
+| Day 3 | 一页策略 + README + Pages 发布 |
 
 ## 7. 明确不做(YAGNI)
 
