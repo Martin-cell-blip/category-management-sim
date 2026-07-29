@@ -180,14 +180,13 @@ body::after{content:"";position:fixed;inset:0;z-index:98;pointer-events:none;opa
   <dl class="meta">
     <div><dt>Data</dt><dd>Olist 巴西电商 10 万+ 真实订单(housewares 主品类,已送达口径)</dd></div>
     <div><dt>Method</dt><dd>DuckDB SQL + Python;决策规则成文,逐条注明依据</dd></div>
-    <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(容差 0)</dd></div>
+    <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(分位精度零容差)</dd></div>
     <div><dt>Companion</dt><dd>配套作品:<a href="research/">行业研究报告</a>(中国市场判断层) · <a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(结算侧)</dd></div>
   </dl>
   <div class="seal" aria-hidden="true"><b>对账</b><b>无误</b><i>TOLERANCE&nbsp;0</i></div>
 </header>
 
 <nav id="nav">
-  <a href="demo.html"><i>LAB</i>交互情景台</a>
   <a href="#m1"><i>01</i>结构诊断</a>
   <a href="#m2"><i>02</i>选品汰换</a>
   <a href="#m3"><i>03</i>控价矩阵</a>
@@ -200,7 +199,7 @@ body::after{content:"";position:fixed;inset:0;z-index:98;pointer-events:none;opa
   <div class="kpi"><b>2,363</b><span>在售 SKU</span></div>
   <div class="kpi"><b>374</b><span>汰换清单 SKU(末位15%+差评硬规则)</span></div>
   <div class="kpi"><b>16.52</b><span>黑五大促 ROI(增量假设毛利÷让利成本)</span></div>
-  <div class="kpi"><b>+199%</b><span>黑五周 GMV vs 前4周基线</span></div>
+  <div class="kpi"><b>+198%</b><span>黑五周 GMV vs 前4周基线</span></div>
 </section>
 
 <div class="note"><b>诚实声明</b>数据为 Olist 巴西电商真实交易(方法论演示,不代表中国市场;中国市场判断见配套<a href="research/">《家居日用品类行业研究报告》</a>);毛利为按价格带假设的参数层(取值依据行研,见 params/cost_assumptions.csv);价格弹性为敏感性假设而非估计值。</div>
@@ -215,7 +214,7 @@ body::after{content:"";position:fixed;inset:0;z-index:98;pointer-events:none;opa
   <p class="rule-note">判定规则:GMV份额/SKU份额 <b>&gt; 1.25 → 供给不足(机会带)</b>;&lt; 0.8 → 供给过密</p>
   <div class="tw"><table><thead><tr><th>价格带</th><th class="num">SKU</th><th class="num">销量件</th><th class="num">GMV(R$)</th><th class="num">GMV份额</th><th class="num">份额比</th><th>判定</th></tr></thead><tbody><tr><td>中价带(25-50)</td><td class="num">695</td><td class="num">1890</td><td class="num">70,952<div class="bar"><i style="width:18%"></i></div></td><td class="num">0.12</td><td class="num">0.39</td><td><span class="tag tag-cold">供给过密</span></td></tr><tr><td>中高价带(50-100)</td><td class="num">648</td><td class="num">1939</td><td class="num">140,674<div class="bar"><i style="width:37%"></i></div></td><td class="num">0.23</td><td class="num">0.83</td><td><span class="tag tag-mid">均衡</span></td></tr><tr><td>低价带(&lt;25)</td><td class="num">410</td><td class="num">1119</td><td class="num">18,866<div class="bar"><i style="width:5%"></i></div></td><td class="num">0.03</td><td class="num">0.18</td><td><span class="tag tag-cold">供给过密</span></td></tr><tr class="hot"><td>高价带(100+)</td><td class="num">610</td><td class="num">1847</td><td class="num">385,136<div class="bar"><i style="width:100%"></i></div></td><td class="num">0.63</td><td class="num">2.42</td><td><span class="tag tag-hot">供给不足(机会带)</span></td></tr></tbody></table></div>
   <p class="takeaway"><b>结 论</b>高价带以 25.8% 的 SKU 贡献 62.6% 的 GMV(份额比 2.42),是唯一的供给不足带,补供给优先级最高;低价带与中价带供给过密,汰换先行。</p>
-  <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(容差 0)。</p>
+  <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(分位精度零容差)。</p>
 </section>
 
 <section class="ex" id="m2" data-no="02">
@@ -253,7 +252,7 @@ body::after{content:"";position:fixed;inset:0;z-index:98;pointer-events:none;opa
     </div>
   </div>
   <div class="tw"><table><thead><tr><th>价格带</th><th class="num">黑五周GMV</th><th class="num">基线周GMV</th><th class="num">GMV提升%</th><th class="num">增量假设毛利(R$)</th></tr></thead><tbody><tr><td>低价带(&lt;25)</td><td class="num">796.65</td><td class="num">99.54</td><td class="num">700.30</td><td class="num">139.42</td></tr><tr class="hot"><td>高价带(100+)</td><td class="num">7,809.57</td><td class="num">2,287.20</td><td class="num">241.40</td><td class="num">2,208.94</td></tr><tr class="hot"><td>中高价带(50-100)</td><td class="num">4,026.15</td><td class="num">1,630.23</td><td class="num">147.00</td><td class="num">838.57</td></tr><tr><td>中价带(25-50)</td><td class="num">1,318.65</td><td class="num">656.72</td><td class="num">100.80</td><td class="num">185.34</td></tr></tbody></table></div>
-  <p class="takeaway"><b>结 论</b>黑五周 GMV +199%,其中高价带提升 241.40%;让利成本极小,增长由流量而非折扣驱动,大促资源应向高价带倾斜。</p>
+  <p class="takeaway"><b>结 论</b>黑五周 GMV +198%,其中高价带提升 241.40%;让利成本极小(下界口径),折扣非增长主因——流量归因为排除法下的待验证假说;大促资源应向高价带倾斜。</p>
   <p class="src">资料来源:Olist 公开数据集;让利成本极小,判断增量由流量而非折扣驱动。</p>
 </section>
 

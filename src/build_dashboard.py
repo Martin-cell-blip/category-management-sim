@@ -24,7 +24,7 @@ m4 = pd.read_csv(OUT / "m4_promo_review.csv")
 MAIN = m1[m1["cat"] == "housewares"]
 gmv_total = MAIN["gmv"].sum()
 roi = m4["promo_roi_total"].iloc[0]
-bf_lift = (m4["gmv"].sum() / m4["gmv_wk"].sum() - 1) * 100
+bf_lift = int((m4["gmv"].sum() / m4["gmv_wk"].sum() - 1) * 100)  # 向下取整,与 README/onepager 口径一致(计算值约 198.5%)
 
 
 # ── 表格构件 ────────────────────────────────────────────────────────────────
@@ -412,7 +412,7 @@ html = f"""<!doctype html>
   <dl class="meta">
     <div><dt>Data</dt><dd>Olist 巴西电商 10 万+ 真实订单(housewares 主品类,已送达口径)</dd></div>
     <div><dt>Method</dt><dd>DuckDB SQL + Python;决策规则成文,逐条注明依据</dd></div>
-    <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(容差 0)</dd></div>
+    <div><dt>Reproduce</dt><dd>一键复现:<code>python run_pipeline.py</code>;跨模块 GMV 对账(分位精度零容差)</dd></div>
     <div><dt>Companion</dt><dd>配套作品:<a href="research/">行业研究报告</a>(中国市场判断层) · <a href="https://github.com/Martin-cell-blip/logistics-settlement-recon">结算对账引擎</a>(结算侧)</dd></div>
   </dl>
   <div class="seal" aria-hidden="true"><b>对账</b><b>无误</b><i>TOLERANCE&nbsp;0</i></div>
@@ -439,7 +439,7 @@ html = f"""<!doctype html>
   <p class="rule-note">判定规则:GMV份额/SKU份额 <b>&gt; 1.25 → 供给不足(机会带)</b>;&lt; 0.8 → 供给过密</p>
   {sec1}
   <p class="takeaway"><b>结 论</b>高价带以 25.8% 的 SKU 贡献 62.6% 的 GMV(份额比 2.42),是唯一的供给不足带,补供给优先级最高;低价带与中价带供给过密,汰换先行。</p>
-  <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(容差 0)。</p>
+  <p class="src">资料来源:Olist 公开数据集;run_pipeline.py 计算,跨模块 GMV 对账(分位精度零容差)。</p>
 </section>
 
 <section class="ex" id="m2" data-no="02">
@@ -477,7 +477,7 @@ html = f"""<!doctype html>
     </div>
   </div>
   {sec4}
-  <p class="takeaway"><b>结 论</b>黑五周 GMV +{bf_lift:.0f}%,其中高价带提升 241.40%;让利成本极小,增长由流量而非折扣驱动,大促资源应向高价带倾斜。</p>
+  <p class="takeaway"><b>结 论</b>黑五周 GMV +{bf_lift:.0f}%,其中高价带提升 241.40%;让利成本极小(下界口径),折扣非增长主因——流量归因为排除法下的待验证假说;大促资源应向高价带倾斜。</p>
   <p class="src">资料来源:Olist 公开数据集;让利成本极小,判断增量由流量而非折扣驱动。</p>
 </section>
 
