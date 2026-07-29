@@ -325,6 +325,27 @@ def write_manifest(con, audit: dict, frames: dict[str, pd.DataFrame]) -> None:
     )
 
 
+def sanity_checks() -> None:
+    """产物级轻量断言:行数/非空/关键列完整性(设计文档 §5 承诺的管线末尾校验)。"""
+    m3 = pd.read_csv(OUT / "m3_pricing_scenarios.csv")
+    assert len(m3) == 36, f"[断言失败] m3 情景应为 36 行(4带×3价×3弹性),实际 {len(m3)}"
+    intro = pd.read_csv(OUT / "m2_intro_candidates.csv")
+    assert len(intro) == 15, f"[断言失败] 扩盘候选应为 15 家,实际 {len(intro)}"
+    delist = pd.read_csv(OUT / "m2_delist_list.csv")
+    assert len(delist) > 0 and delist["reason"].notna().all(), "[断言失败] 汰换清单为空或缺 reason"
+    key_cols = {
+        "m1_price_band_matrix.csv": ["gmv", "sku_share", "gmv_share"],
+        "m2_sku_scorecard.csv": ["gmv", "score"],
+        "m3_pricing_scenarios.csv": ["gmv_chg_pct", "gp_chg_pct"],
+        "m4_promo_review.csv": ["gmv", "gmv_wk", "gmv_lift_pct"],
+    }
+    for name, cols in key_cols.items():
+        df = pd.read_csv(OUT / name)
+        for c in cols:
+            assert c in df.columns and df[c].notna().all(), f"[断言失败] {name}:{c} 缺列或含 NaN"
+    print("  [断言通过] 行数/非空/关键列完整性校验(4 表 9 列)")
+
+
 def main() -> None:
     con = duckdb.connect()
     print("== 0. 数据与底表 ==");        setup(con)
@@ -341,6 +362,7 @@ def main() -> None:
         {"m1": m1, "m2_scorecard": sku, "m2_delist": delist,
          "m2_intro": intro, "m3": pricing, "m4": promo},
     )
+    sanity_checks()
     print("== 6. 生成看板 ==")
     subprocess.check_call([sys.executable, str(ROOT / "src/build_dashboard.py")], cwd=ROOT)
     print(f"[完成] 决策产物见 {OUT},看板见 docs/index.html")
