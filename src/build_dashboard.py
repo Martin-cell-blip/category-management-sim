@@ -452,7 +452,7 @@ html = f"""<!doctype html>
   {sec2a}
   <p class="rule-note" style="margin-top:20px">机会带引入候选(评分≥4.5 的高分卖家)</p>
   {sec2b}
-  <p class="takeaway"><b>结 论</b>{len(delist)} 个低效 SKU 集中于供给过密带,汰换释放的坑位优先给到机会带 {len(intro)} 家评分≥4.5 的高分卖家(谈判扩盘/独家款)。</p>
+  <p class="takeaway"><b>结 论</b>{len(delist)} 个低效 SKU 分布在各价格带(低价带与中价带合计约 {delist['price_band'].isin(['低价带(<25)', '中价带(25-50)']).mean() * 100:.0f}%),汰换释放的坑位优先给到机会带 {len(intro)} 家评分≥4.5 的高分卖家(谈判扩盘/独家款)。</p>
   <p class="src">资料来源:Olist 公开数据集;评分卡权重与硬规则见 specs/ 决策规则文档。</p>
 </section>
 
